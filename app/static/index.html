@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CareerOS | AI-Powered Job Search Platform & Pipeline</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            brand: {
+              500: '#3b82f6',
+              600: '#2563eb',
+              700: '#1d4ed8'
+            },
+            dark: {
+              950: '#090d16',
+              900: '#0f172a',
+              850: '#131e36',
+              800: '#1e293b',
+              750: '#25334d',
+              700: '#334155'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { font-family: 'Inter', sans-serif; background-color: #090d16; color: #e2e8f0; }
+    .glass-card {
+      background: rgba(19, 30, 54, 0.7);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .custom-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
+    .custom-scroll::-webkit-scrollbar-track { background: #0b1120; }
+    .custom-scroll::-webkit-scrollbar-thumb { background: #26354f; border-radius: 4px; }
+    .custom-scroll::-webkit-scrollbar-thumb:hover { background: #3b82f6; }
+  </style>
+</head>
+<body class="h-screen w-screen overflow-hidden flex bg-[#090d16] text-slate-200 antialiased selection:bg-blue-600 selection:text-white">
+
+  <!-- Left Sidebar -->
+  <aside class="w-64 h-full bg-[#0c1222] border-r border-slate-800/80 flex flex-col justify-between shrink-0 select-none z-20">
+    <!-- Top Brand & Navigation -->
+    <div class="flex-1 flex flex-col min-h-0">
+      <!-- Brand Logo -->
+      <div class="h-16 flex items-center px-5 border-b border-slate-800/80 gap-3 shrink-0">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center font-bold text-white shadow-lg shadow-blue-500/20 shrink-0">
+          <i class="fa-solid fa-bolt"></i>
+        </div>
+        <div class="min-w-0">
+          <div class="flex items-center gap-1.5">
+            <span class="font-extrabold tracking-tight text-white text-base">CareerOS</span>
+            <span class="text-[9px] font-mono font-semibold text-blue-400 bg-blue-950/90 px-1.5 py-0.5 rounded border border-blue-500/30">SaaS</span>
+          </div>
+          <p class="text-[10px] text-slate-500 truncate">AI Job Hunt Platform</p>
+        </div>
+      </div>
+
+      <!-- Navigation Links -->
+      <nav class="p-3 space-y-1.5 text-xs font-medium overflow-y-auto custom-scroll flex-1">
+        <button onclick="switchTab('pipeline')" id="nav-pipeline" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl bg-blue-600 text-white font-semibold transition shadow-sm">
+          <i class="fa-solid fa-table-columns w-4 text-center"></i> Pipeline & Kanban
+        </button>
+        <button onclick="switchTab('tailor')" id="nav-tailor" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800/60 transition">
+          <i class="fa-solid fa-wand-magic-sparkles w-4 text-center text-amber-400"></i> 1-Click AI Tailor
+        </button>
+        <button onclick="switchTab('radar')" id="nav-radar" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800/60 transition">
+          <i class="fa-solid fa-satellite-dish w-4 text-center text-emerald-400"></i> Job Radar (Auto)
+        </button>
+        <button onclick="switchTab('vault')" id="nav-vault" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800/60 transition">
+          <i class="fa-solid fa-folder-open w-4 text-center text-purple-400"></i> Document Vault
+        </button>
+        <button onclick="switchTab('profile')" id="nav-profile" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800/60 transition">
+          <i class="fa-solid fa-user-astronaut w-4 text-center text-sky-400"></i> Candidate Profile
+        </button>
+        <button onclick="switchTab('settings')" id="nav-settings" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800/60 transition">
+          <i class="fa-solid fa-sliders w-4 text-center text-slate-400"></i> Free AI Keys & Config
+        </button>
+      </nav>
+    </div>
+
+    <!-- User Profile & Account Switcher Footer -->
+    <div class="p-3.5 border-t border-slate-800/80 bg-slate-900/60 shrink-0">
+      <div class="flex items-center justify-between gap-2">
+        <div class="flex items-center gap-2.5 min-w-0">
+          <div class="w-8 h-8 rounded-full bg-blue-600/30 border border-blue-500/40 flex items-center justify-center text-xs font-bold text-blue-300 shrink-0" id="user-avatar">
+            SS
+          </div>
+          <div class="min-w-0">
+            <div class="text-xs font-bold text-white truncate max-w-[125px]" id="user-display-name">Shreyash Shukla</div>
+            <div class="text-[10px] text-slate-400 truncate max-w-[125px]" id="user-display-email">shreyash@careeros</div>
+          </div>
+        </div>
+        <button onclick="switchUserModal()" title="Switch Account / Invite Friend" class="text-slate-400 hover:text-white text-xs p-1.5 hover:bg-slate-800 rounded-lg shrink-0 transition">
+          <i class="fa-solid fa-arrow-right-arrow-left"></i>
+        </button>
+      </div>
+
+      <div class="mt-2.5 pt-2 border-t border-slate-800/60 flex items-center justify-between text-[10px] font-mono text-slate-400">
+        <span>AI Engine:</span>
+        <span class="text-emerald-400 font-semibold px-1.5 py-0.5 rounded bg-emerald-950/60 border border-emerald-500/30" id="sidebar-ai-mode">Gemini (Free)</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main View Area -->
+  <div class="flex-1 h-full flex flex-col min-w-0 overflow-hidden">
+    
+    <!-- Top Header Bar -->
+    <header class="h-16 px-6 sm:px-8 border-b border-slate-800/80 flex items-center justify-between shrink-0 bg-[#090d16]/90 backdrop-blur-md z-10">
+      <div class="min-w-0 pr-4">
+        <h2 class="text-base sm:text-lg font-bold text-white truncate" id="page-title">Applications Pipeline & Tracking</h2>
+        <p class="text-xs text-slate-400 hidden sm:block truncate" id="page-subtitle">Track, tailor, and progress your active opportunities</p>
+      </div>
+      <div class="flex items-center gap-3 shrink-0">
+        <button onclick="switchTab('tailor')" class="px-3.5 py-1.5 text-xs font-semibold rounded-xl bg-blue-600 hover:bg-blue-500 text-white transition flex items-center gap-1.5 shadow-md shadow-blue-600/25">
+          <i class="fa-solid fa-plus"></i> Tailor New Role
+        </button>
+        <a href="http://127.0.0.1:8000/docs" target="_blank" class="px-3 py-1.5 text-xs font-mono font-medium rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition flex items-center gap-1.5">
+          <i class="fa-solid fa-code text-blue-400"></i> API Docs
+        </a>
+      </div>
+    </header>
+
+    <!-- Scrollable Tab Content Container -->
+    <main class="flex-1 overflow-y-auto overflow-x-hidden p-6 sm:p-8 custom-scroll">
+
+      <!-- ========================================== -->
+      <!-- TAB 1: PIPELINE & KANBAN                   -->
+      <!-- ========================================== -->
+      <div id="tab-pipeline" class="space-y-6">
+        
+        <!-- Metric KPI Cards -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div class="glass-card rounded-2xl p-4 sm:p-5">
+            <div class="text-[11px] font-mono text-slate-400 uppercase tracking-wider">Total Tracked</div>
+            <div class="text-2xl sm:text-3xl font-extrabold text-white mt-1 font-mono" id="kpi-total">0</div>
+            <div class="text-[11px] text-blue-400 mt-1 font-medium">Active search funnel</div>
+          </div>
+          <div class="glass-card rounded-2xl p-4 sm:p-5">
+            <div class="text-[11px] font-mono text-slate-400 uppercase tracking-wider">Drafted / Tailored</div>
+            <div class="text-2xl sm:text-3xl font-extrabold text-amber-400 mt-1 font-mono" id="kpi-drafted">0</div>
+            <div class="text-[11px] text-slate-400 mt-1 font-medium">Ready for submission</div>
+          </div>
+          <div class="glass-card rounded-2xl p-4 sm:p-5">
+            <div class="text-[11px] font-mono text-slate-400 uppercase tracking-wider">Interviews Active</div>
+            <div class="text-2xl sm:text-3xl font-extrabold text-purple-400 mt-1 font-mono" id="kpi-interview">0</div>
+            <div class="text-[11px] text-purple-300 mt-1 font-medium">Target ~30% conversion</div>
+          </div>
+          <div class="glass-card rounded-2xl p-4 sm:p-5">
+            <div class="text-[11px] font-mono text-slate-400 uppercase tracking-wider">Average Fit Score</div>
+            <div class="text-2xl sm:text-3xl font-extrabold text-emerald-400 mt-1 font-mono" id="kpi-fit">0%</div>
+            <div class="text-[11px] text-emerald-400 mt-1 font-medium">High-match precision</div>
+          </div>
+        </div>
+
+        <!-- Horizontal Scrollable Kanban Columns -->
+        <div class="flex gap-4 overflow-x-auto pb-6 custom-scroll items-start min-h-[calc(100vh-270px)]">
+          
+          <!-- Column 1: Discovered -->
+          <div class="w-72 shrink-0 bg-slate-900/60 rounded-2xl p-3.5 border border-slate-800/80 flex flex-col">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-800 text-xs font-semibold text-slate-300">
+              <span class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-slate-400"></span> Discovered</span>
+              <span class="font-mono text-[10px] bg-slate-800 px-2 py-0.5 rounded text-slate-300" id="col-count-discovered">0</span>
+            </div>
+            <div class="mt-3 space-y-3 min-h-[160px]" id="col-discovered"></div>
+          </div>
+
+          <!-- Column 2: Drafted -->
+          <div class="w-72 shrink-0 bg-slate-900/60 rounded-2xl p-3.5 border border-slate-800/80 flex flex-col">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-800 text-xs font-semibold text-amber-400">
+              <span class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-amber-400"></span> Tailored / Drafted</span>
+              <span class="font-mono text-[10px] bg-amber-950/60 text-amber-300 border border-amber-500/20 px-2 py-0.5 rounded" id="col-count-drafted">0</span>
+            </div>
+            <div class="mt-3 space-y-3 min-h-[160px]" id="col-drafted"></div>
+          </div>
+
+          <!-- Column 3: Applied -->
+          <div class="w-72 shrink-0 bg-slate-900/60 rounded-2xl p-3.5 border border-slate-800/80 flex flex-col">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-800 text-xs font-semibold text-blue-400">
+              <span class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-blue-400"></span> Applied</span>
+              <span class="font-mono text-[10px] bg-blue-950/60 text-blue-300 border border-blue-500/20 px-2 py-0.5 rounded" id="col-count-applied">0</span>
+            </div>
+            <div class="mt-3 space-y-3 min-h-[160px]" id="col-applied"></div>
+          </div>
+
+          <!-- Column 4: Interview -->
+          <div class="w-72 shrink-0 bg-slate-900/60 rounded-2xl p-3.5 border border-slate-800/80 flex flex-col">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-800 text-xs font-semibold text-purple-400">
+              <span class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-purple-400"></span> Interview</span>
+              <span class="font-mono text-[10px] bg-purple-950/60 text-purple-300 border border-purple-500/20 px-2 py-0.5 rounded" id="col-count-interview">0</span>
+            </div>
+            <div class="mt-3 space-y-3 min-h-[160px]" id="col-interview"></div>
+          </div>
+
+          <!-- Column 5: Offer / Hired -->
+          <div class="w-72 shrink-0 bg-slate-900/60 rounded-2xl p-3.5 border border-slate-800/80 flex flex-col">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-800 text-xs font-semibold text-emerald-400">
+              <span class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-emerald-400"></span> Offer</span>
+              <span class="font-mono text-[10px] bg-emerald-950/60 text-emerald-300 border border-emerald-500/20 px-2 py-0.5 rounded" id="col-count-offer">0</span>
+            </div>
+            <div class="mt-3 space-y-3 min-h-[160px]" id="col-offer"></div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ========================================== -->
+      <!-- TAB 2: 1-CLICK AI TAILOR                   -->
+      <!-- ========================================== -->
+      <div id="tab-tailor" class="space-y-6 hidden">
+        <div class="max-w-4xl mx-auto space-y-6">
+          
+          <div class="glass-card rounded-2xl p-6 sm:p-7">
+            <h3 class="text-base font-bold text-white mb-1.5 flex items-center gap-2">
+              <i class="fa-solid fa-wand-magic-sparkles text-amber-400"></i> AI Document Tailoring Engine
+            </h3>
+            <p class="text-xs text-slate-400 mb-6 leading-relaxed">
+              Paste any job posting text or description. Our AI model evaluates the technical match against your candidate profile, reframes your real metrics (e.g. 250+ APIs, 35% latency drop, GFG rank #28), and generates an ATS-optimized CV, Cover Letter, and Cold Outreach DM in seconds.
+            </p>
+
+            <form onsubmit="handleTailorSubmit(event)" class="space-y-4">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-xs font-medium text-slate-300 mb-1">Company Name</label>
+                  <input type="text" id="tailor-company" placeholder="e.g. Razorpay, Zepto, ViralMe" required class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition">
+                </div>
+                <div>
+                  <label class="block text-xs font-medium text-slate-300 mb-1">Role Title</label>
+                  <input type="text" id="tailor-role" placeholder="e.g. Backend Software Engineer (Node.js / Python)" required class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition">
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-xs font-medium text-slate-300 mb-1">Job Description (Paste text or requirements)</label>
+                <textarea id="tailor-jd" rows="6" placeholder="Paste full JD text here..." required class="w-full bg-slate-900 border border-slate-800 rounded-xl p-3.5 text-xs text-white placeholder-slate-500 font-mono focus:outline-none focus:border-blue-500 custom-scroll transition"></textarea>
+              </div>
+
+              <div class="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2">
+                <div class="flex items-center gap-2 text-xs w-full sm:w-auto">
+                  <span class="text-slate-400 shrink-0">Model Engine:</span>
+                  <select id="tailor-provider" class="bg-slate-900 border border-slate-800 text-xs text-white rounded-xl px-3 py-2 focus:outline-none w-full sm:w-auto">
+                    <option value="gemini">Google Gemini 1.5 Flash (100% Free)</option>
+                    <option value="groq">Groq Llama 3.3 70B (Fast Free)</option>
+                    <option value="offline">Smart Heuristic Engine (Offline / Instant)</option>
+                  </select>
+                </div>
+
+                <button type="submit" id="btn-tailor-generate" class="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs transition flex items-center justify-center gap-2 shadow-lg shadow-blue-600/30">
+                  <i class="fa-solid fa-bolt"></i> Generate Tailored Assets
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <!-- Tailored Results Display -->
+          <div id="tailor-results" class="space-y-6 hidden">
+            <!-- Fit Card -->
+            <div class="glass-card rounded-2xl p-6 border-l-4 border-l-emerald-500">
+              <div class="flex items-center justify-between">
+                <div>
+                  <span class="text-xs font-mono text-emerald-400 font-bold uppercase">ATS Fit Score</span>
+                  <h4 class="text-xl font-bold text-white mt-1" id="res-score">94 / 100 (Strong Match)</h4>
+                </div>
+                <div class="text-right">
+                  <span class="text-xs text-slate-400">Target Role</span>
+                  <div class="text-xs font-bold text-white" id="res-target-role">Backend Engineer</div>
+                </div>
+              </div>
+              <p class="text-xs text-slate-300 mt-3 leading-relaxed" id="res-summary"></p>
+              <div class="mt-4 flex flex-wrap gap-1.5 text-xs font-mono" id="res-skills-chips"></div>
+            </div>
+
+            <!-- Document Tabs -->
+            <div class="glass-card rounded-2xl overflow-hidden">
+              <div class="flex border-b border-slate-800 bg-slate-900/60 text-xs font-medium text-slate-400 overflow-x-auto">
+                <button onclick="switchDocSubTab('cv')" id="subtab-btn-cv" class="px-5 py-3 text-white border-b-2 border-blue-500 font-semibold shrink-0">Tailored Resume</button>
+                <button onclick="switchDocSubTab('cl')" id="subtab-btn-cl" class="px-5 py-3 hover:text-white shrink-0">1-Page Cover Letter</button>
+                <button onclick="switchDocSubTab('dm')" id="subtab-btn-dm" class="px-5 py-3 hover:text-white shrink-0">Cold Founder Outreach</button>
+                <button onclick="switchDocSubTab('latex')" id="subtab-btn-latex" class="px-5 py-3 hover:text-white font-mono shrink-0">LaTeX Code</button>
+              </div>
+
+              <div class="p-6">
+                <!-- CV Content -->
+                <div id="doc-subtab-cv" class="space-y-4">
+                  <div class="flex justify-between items-center pb-2 border-b border-slate-800">
+                    <span class="text-xs font-mono text-slate-400">Plain text / ATS formatted view</span>
+                    <button onclick="copyToClipboard('res-cv-content')" class="text-xs text-blue-400 hover:text-blue-300 font-medium flex items-center gap-1">
+                      <i class="fa-regular fa-copy"></i> Copy Text
+                    </button>
+                  </div>
+                  <pre id="res-cv-content" class="bg-slate-950 p-4 rounded-xl text-xs font-mono text-slate-300 whitespace-pre-wrap overflow-x-auto max-h-96 custom-scroll"></pre>
+                </div>
+
+                <!-- Cover Letter Content -->
+                <div id="doc-subtab-cl" class="space-y-4 hidden">
+                  <div class="flex justify-between items-center pb-2 border-b border-slate-800">
+                    <span class="text-xs font-mono text-slate-400">Forward-looking tailored letter</span>
+                    <button onclick="copyToClipboard('res-cl-content')" class="text-xs text-blue-400 hover:text-blue-300 font-medium flex items-center gap-1">
+                      <i class="fa-regular fa-copy"></i> Copy Letter
+                    </button>
+                  </div>
+                  <pre id="res-cl-content" class="bg-slate-950 p-4 rounded-xl text-xs font-mono text-slate-300 whitespace-pre-wrap overflow-x-auto max-h-96 custom-scroll"></pre>
+                </div>
+
+                <!-- Cold DM Content -->
+                <div id="doc-subtab-dm" class="space-y-4 hidden">
+                  <div class="flex justify-between items-center pb-2 border-b border-slate-800">
+                    <span class="text-xs font-mono text-slate-400">Direct outreach drafts</span>
+                    <button onclick="copyToClipboard('res-dm-content')" class="text-xs text-blue-400 hover:text-blue-300 font-medium flex items-center gap-1">
+                      <i class="fa-regular fa-copy"></i> Copy Messages
+                    </button>
+                  </div>
+                  <pre id="res-dm-content" class="bg-slate-950 p-4 rounded-xl text-xs font-mono text-slate-300 whitespace-pre-wrap overflow-x-auto max-h-96 custom-scroll"></pre>
+                </div>
+
+                <!-- LaTeX Content -->
+                <div id="doc-subtab-latex" class="space-y-4 hidden">
+                  <div class="flex justify-between items-center pb-2 border-b border-slate-800">
+                    <span class="text-xs font-mono text-slate-400">moderncv banking LaTeX source code</span>
+                    <button onclick="copyToClipboard('res-latex-content')" class="text-xs text-blue-400 hover:text-blue-300 font-medium flex items-center gap-1">
+                      <i class="fa-regular fa-copy"></i> Copy LaTeX
+                    </button>
+                  </div>
+                  <pre id="res-latex-content" class="bg-slate-950 p-4 rounded-xl text-xs font-mono text-slate-400 whitespace-pre-wrap overflow-x-auto max-h-96 custom-scroll"></pre>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ========================================== -->
+      <!-- TAB 3: JOB RADAR                           -->
+      <!-- ========================================== -->
+      <div id="tab-radar" class="space-y-6 hidden">
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div>
+            <h3 class="text-lg font-bold text-white flex items-center gap-2">
+              <i class="fa-solid fa-satellite-dish text-emerald-400"></i> Automated Job Radar
+            </h3>
+            <p class="text-xs text-slate-400 mt-0.5">Scrapes live remote and tech postings matching your skill profile</p>
+          </div>
+          <div class="flex items-center gap-2 w-full sm:w-auto">
+            <input type="text" id="radar-query-input" value="backend" placeholder="Search keywords..." class="bg-slate-900 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none w-full sm:w-48">
+            <button onclick="loadRadarJobs()" class="px-4 py-1.5 text-xs font-semibold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white transition flex items-center gap-1.5 shrink-0">
+              <i class="fa-solid fa-arrows-rotate"></i> Scan Now
+            </button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="radar-jobs-grid">
+          <!-- Rendered by JS -->
+        </div>
+      </div>
+
+      <!-- ========================================== -->
+      <!-- TAB 4: DOCUMENT VAULT                      -->
+      <!-- ========================================== -->
+      <div id="tab-vault" class="space-y-6 hidden">
+        <div>
+          <h3 class="text-lg font-bold text-white flex items-center gap-2">
+            <i class="fa-solid fa-folder-open text-purple-400"></i> Document & CV Vault
+          </h3>
+          <p class="text-xs text-slate-400 mt-0.5">Every resume, cover letter, and outreach copy generated for your applications</p>
+        </div>
+
+        <div class="glass-card rounded-2xl overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr class="border-b border-slate-800 bg-slate-900/60 font-mono text-slate-400">
+                  <th class="py-3 px-4">Date</th>
+                  <th class="py-3 px-4">Company</th>
+                  <th class="py-3 px-4">Role</th>
+                  <th class="py-3 px-4">Document Type</th>
+                  <th class="py-3 px-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="vault-table-body" class="divide-y divide-slate-800/60 font-mono">
+                <!-- Rendered by JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ========================================== -->
+      <!-- TAB 5: CANDIDATE PROFILE                   -->
+      <!-- ========================================== -->
+      <div id="tab-profile" class="space-y-6 hidden">
+        <div class="max-w-4xl mx-auto glass-card rounded-2xl p-6 sm:p-7">
+          <h3 class="text-base font-bold text-white mb-1.5 flex items-center gap-2">
+            <i class="fa-solid fa-user-astronaut text-sky-400"></i> Master Candidate Profile
+          </h3>
+          <p class="text-xs text-slate-400 mb-6">
+            This is the single source of truth that powers the AI evaluation and tailoring engine.
+          </p>
+
+          <form onsubmit="handleProfileSave(event)" class="space-y-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs font-medium text-slate-300 mb-1">Headline</label>
+                <input type="text" id="prof-headline" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-blue-500">
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-slate-300 mb-1">Location</label>
+                <input type="text" id="prof-location" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-blue-500">
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-slate-300 mb-1">Phone</label>
+                <input type="text" id="prof-phone" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-blue-500">
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-slate-300 mb-1">LinkedIn URL</label>
+                <input type="text" id="prof-linkedin" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-blue-500">
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-slate-300 mb-1">GitHub URL</label>
+                <input type="text" id="prof-github" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-blue-500">
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-slate-300 mb-1">Portfolio URL</label>
+                <input type="text" id="prof-portfolio" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-blue-500">
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-medium text-slate-300 mb-1">Technical Skills (JSON array or comma-separated)</label>
+              <textarea id="prof-skills" rows="3" class="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-xs text-white font-mono focus:outline-none focus:border-blue-500"></textarea>
+            </div>
+
+            <div class="pt-2 flex justify-end">
+              <button type="submit" class="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs transition">
+                Save Profile Changes
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- ========================================== -->
+      <!-- TAB 6: SETTINGS                            -->
+      <!-- ========================================== -->
+      <div id="tab-settings" class="space-y-6 hidden">
+        <div class="max-w-3xl mx-auto glass-card rounded-2xl p-6 sm:p-7">
+          <h3 class="text-base font-bold text-white mb-1.5 flex items-center gap-2">
+            <i class="fa-solid fa-sliders text-slate-400"></i> Free AI Provider Settings (No Card Needed)
+          </h3>
+          <p class="text-xs text-slate-400 mb-6">
+            CareerOS uses completely free AI tiers. You can get an API key in 60 seconds without entering a credit card.
+          </p>
+
+          <form onsubmit="handleKeysSave(event)" class="space-y-5">
+            <div class="bg-slate-900/60 p-4 rounded-xl border border-slate-800 space-y-2">
+              <div class="flex items-center justify-between">
+                <label class="text-xs font-bold text-white">Google Gemini API Key (Recommended)</label>
+                <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-blue-400 hover:text-blue-300 text-xs font-medium underline flex items-center gap-1">
+                  Get free key in AI Studio <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+                </a>
+              </div>
+              <p class="text-[11px] text-slate-400">100% free, no credit card required. 15 requests per minute free tier.</p>
+              <input type="password" id="key-gemini" placeholder="AIzaSy..." class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white font-mono focus:outline-none focus:border-blue-500">
+            </div>
+
+            <div class="bg-slate-900/60 p-4 rounded-xl border border-slate-800 space-y-2">
+              <div class="flex items-center justify-between">
+                <label class="text-xs font-bold text-white">Groq Cloud API Key (Optional)</label>
+                <a href="https://console.groq.com/keys" target="_blank" class="text-blue-400 hover:text-blue-300 text-xs font-medium underline flex items-center gap-1">
+                  Get free key on Groq <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+                </a>
+              </div>
+              <p class="text-[11px] text-slate-400">Ultra-fast inference running Llama 3.3 70B & DeepSeek R1 for free.</p>
+              <input type="password" id="key-groq" placeholder="gsk_..." class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white font-mono focus:outline-none focus:border-blue-500">
+            </div>
+
+            <div class="pt-2 flex justify-end">
+              <button type="submit" class="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs transition">
+                Save AI Settings
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <script src="/static/js/app.js"></script>
+</body>
+</html>
