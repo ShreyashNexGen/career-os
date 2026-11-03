@@ -117,6 +117,36 @@ def seed_data():
         )
         db.add(app1)
         db.commit()
+        db.refresh(app1)
+
+        # Pre-seed tailored documents for ViralMe
+        candidate_summary = "Backend-focused Software Engineer with 2+ years of production experience building 250+ RESTful APIs and scalable microservices across Node.js, Express, and Python. Proven track record in database query optimization (35% latency drop), Redis caching, and 99.9% uptime SLA. Elite problem solver ranked Top 28th globally on GeeksforGeeks."
+        viralme_cv = AIService._build_text_cv({"name": "Shreyash Shukla", "phone": "+91 6306211105", "email": "shreyashshukla7398554573@gmail.com", "location": "Noida, India"}, candidate_summary)
+        viralme_latex = AIService._build_latex_cv({"name": "Shreyash Shukla"}, candidate_summary, "ViralMe", "Founding Backend Engineer")
+        viralme_html = AIService._build_html_cv({"name": "Shreyash Shukla"}, candidate_summary, "ViralMe", "Founding Backend Engineer")
+        viralme_prep = AIService._build_interview_prep({"name": "Shreyash Shukla"}, "ViralMe", "Founding Backend Engineer", ["Node.js", "Express", "TypeScript", "SQL", "Redis"])
+
+        db.add_all([
+            GeneratedDocument(
+                user_id=shreyash.id,
+                application_id=app1.id,
+                company="ViralMe",
+                role="Founding Backend & Full Stack Engineer",
+                doc_type="cv",
+                content_text=viralme_cv,
+                latex_text=viralme_latex,
+                html_text=viralme_html
+            ),
+            GeneratedDocument(
+                user_id=shreyash.id,
+                application_id=app1.id,
+                company="ViralMe",
+                role="Founding Backend & Full Stack Engineer",
+                doc_type="interview_prep",
+                content_text=json.dumps(viralme_prep)
+            )
+        ])
+        db.commit()
 
         # Seed friend demo user
         friend = User(
@@ -300,7 +330,8 @@ def tailor_application(req: TailorRequest, current_user: User = Depends(get_curr
         role=role,
         doc_type="cv",
         content_text=result["tailored_cv_text"],
-        latex_text=result["tailored_cv_latex"]
+        latex_text=result["tailored_cv_latex"],
+        html_text=result.get("tailored_cv_html")
     )
     doc_cl = GeneratedDocument(
         user_id=current_user.id,
@@ -310,15 +341,33 @@ def tailor_application(req: TailorRequest, current_user: User = Depends(get_curr
         doc_type="cover_letter",
         content_text=result["tailored_cover_letter"]
     )
+    
+    outreach_bundle = (
+        f"--- LINKEDIN CONNECTION NOTE (<280 CHARS) ---\n{result.get('outreach_connection_note', '')}\n\n"
+        f"--- LINKEDIN INMAIL / FULL DM ---\n{result.get('outreach_linkedin_dm', '')}\n\n"
+        f"--- COLD EMAIL ---\n{result.get('outreach_cold_email', '')}\n\n"
+        f"--- DAY 4 FOLLOW-UP BUMP ---\n{result.get('outreach_followup_1', '')}\n\n"
+        f"--- DAY 8 VALUE-ADD FOLLOW-UP ---\n{result.get('outreach_followup_2', '')}"
+    )
     doc_dm = GeneratedDocument(
         user_id=current_user.id,
         application_id=app_entry.id,
         company=company,
         role=role,
         doc_type="outreach_dm",
-        content_text=f"LINKEDIN DM:\n{result['outreach_linkedin_dm']}\n\nCOLD EMAIL:\n{result['outreach_cold_email']}"
+        content_text=outreach_bundle
     )
-    db.add_all([doc_cv, doc_cl, doc_dm])
+
+    doc_prep = GeneratedDocument(
+        user_id=current_user.id,
+        application_id=app_entry.id,
+        company=company,
+        role=role,
+        doc_type="interview_prep",
+        content_text=json.dumps(result.get("interview_prep", {}))
+    )
+
+    db.add_all([doc_cv, doc_cl, doc_dm, doc_prep])
     db.commit()
 
     result["application_id"] = app_entry.id
@@ -328,8 +377,68 @@ def tailor_application(req: TailorRequest, current_user: User = Depends(get_curr
 # JOB RADAR (Auto Job Discovery)
 # ==========================================
 @app.get("/api/radar/jobs")
-def get_radar_jobs(query: str = "backend", limit: int = 12):
-    return JobService.fetch_radar_jobs(query=query, limit=limit)
+def get_radar_jobs(
+    query: str = "all",
+    location: str = "all",
+    role_type: str = "all",
+    limit: int = 150
+):
+    return JobService.fetch_radar_jobs(query=query, location=location, role_type=role_type, limit=limit)
+
+# ==========================================
+# SALARY BENCHMARK CALCULATOR
+# ==========================================
+@app.post("/api/salary-benchmark")
+def get_salary_benchmark(payload: dict):
+    role = payload.get("role", "Backend Software Engineer")
+    exp = float(payload.get("experience_years", 2.0))
+    loc = payload.get("location", "Bengaluru")
+    tier = payload.get("company_tier", "tier1")
+    return AIService.calculate_salary_benchmark(role=role, experience_years=exp, location=loc, company_tier=tier)
+
+# ==========================================
+# APPLICATION INTERVIEW PREP RETRIEVAL
+# ==========================================
+@app.get("/api/applications/{app_id}/prep")
+def get_application_prep(app_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    app_entry = db.query(Application).filter(Application.id == app_id, Application.user_id == current_user.id).first()
+    if not app_entry:
+        raise HTTPException(status_code=404, detail="Application not found")
+
+    # Look for existing interview prep doc
+    prep_doc = db.query(GeneratedDocument).filter(
+        GeneratedDocument.application_id == app_id,
+        GeneratedDocument.doc_type == "interview_prep"
+    ).first()
+
+    if prep_doc:
+        try:
+            return json.loads(prep_doc.content_text)
+        except Exception:
+            pass
+
+    # Generate on the fly
+    profile = db.query(CandidateProfile).filter(CandidateProfile.user_id == current_user.id).first()
+    candidate_data = {
+        "name": current_user.full_name,
+        "email": current_user.email,
+        "phone": profile.phone if profile else "+91 6306211105",
+        "skills": json.loads(profile.skills_json) if (profile and profile.skills_json) else ["Node.js", "Express", "Python", "SQL", "Redis"]
+    }
+    prep = AIService._build_interview_prep(candidate_data, app_entry.company, app_entry.role, ["Node.js", "SQL", "Redis"])
+
+    # Cache as document
+    new_doc = GeneratedDocument(
+        user_id=current_user.id,
+        application_id=app_entry.id,
+        company=app_entry.company,
+        role=app_entry.role,
+        doc_type="interview_prep",
+        content_text=json.dumps(prep)
+    )
+    db.add(new_doc)
+    db.commit()
+    return prep
 
 # ==========================================
 # APPLICATIONS PIPELINE (Kanban & Table)

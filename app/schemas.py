@@ -81,9 +81,14 @@ class TailorResponse(BaseModel):
     missing_skills: List[str]
     tailored_cv_text: str
     tailored_cv_latex: str
+    tailored_cv_html: Optional[str] = None
     tailored_cover_letter: str
     outreach_linkedin_dm: str
+    outreach_connection_note: Optional[str] = None
     outreach_cold_email: str
+    outreach_followup_1: Optional[str] = None
+    outreach_followup_2: Optional[str] = None
+    interview_prep: Optional[Dict[str, Any]] = None
     application_id: Optional[int] = None
 
 # --- Application Tracking Schemas ---
@@ -141,3 +146,19 @@ class StatsResponse(BaseModel):
     status_counts: Dict[str, int]
     avg_fit_score: float
     total_documents: int
+
+# --- Salary Benchmark Schemas ---
+class SalaryBenchmarkRequest(BaseModel):
+    role: str
+    experience_years: float = 2.0
+    location: str = "Bengaluru"
+    company_tier: str = "tier1" # early_stage, growth_unicorn, tier1
+
+class SalaryBenchmarkResponse(BaseModel):
+    base_min: str
+    base_max: str
+    bonus_estimate: str
+    esop_estimate: str
+    total_ctc_range: str
+    insights: List[str]
+    negotiation_script: str
