@@ -19,7 +19,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 // --- Tab Navigation ---
 function switchTab(tabId) {
   currentTab = tabId;
-  const tabs = ['pipeline', 'tailor', 'radar', 'salary', 'vault', 'profile', 'settings'];
+  const tabs = ['pipeline', 'tailor', 'radar', 'prep', 'salary', 'vault', 'profile', 'settings'];
   tabs.forEach(t => {
     const el = document.getElementById(`tab-${t}`);
     const navBtn = document.getElementById(`nav-${t}`);
@@ -33,10 +33,26 @@ function switchTab(tabId) {
     }
   });
 
+  // Highlight Mobile Bottom Bar
+  const bnavTabs = ['pipeline', 'tailor', 'radar', 'prep', 'vault'];
+  bnavTabs.forEach(b => {
+    const bBtn = document.getElementById(`bnav-${b}`);
+    if (bBtn) {
+      if (b === tabId) {
+        bBtn.className = 'flex flex-col items-center gap-0.5 text-blue-500 text-[10px] font-semibold py-1 px-2 transition';
+      } else {
+        bBtn.className = 'flex flex-col items-center gap-0.5 text-slate-400 hover:text-white text-[10px] font-medium py-1 px-2 transition';
+      }
+    }
+  });
+
+  closeMobileSidebar();
+
   const titles = {
     pipeline: 'Applications Pipeline & Tracking',
     tailor: '1-Click AI Document Tailor',
     radar: 'Automated Job Radar (100+ Active Jobs)',
+    prep: 'Technical Interview Strategy Suite',
     salary: 'Salary Benchmark & ESOP Calculator',
     vault: 'Document & CV Archive Vault',
     profile: 'Candidate Master Profile',
@@ -46,6 +62,7 @@ function switchTab(tabId) {
     pipeline: 'Track, tailor, and progress your active opportunities',
     tailor: 'Generate tailored ATS resumes, letters, outreach, and interview kits in seconds',
     radar: 'Scrapes live tech postings matching your skill profile',
+    prep: 'Domain architecture blueprints, 10+ technical Q&As, and grounded STAR stories',
     salary: 'Expected market CTC, stock options, and word-for-word negotiation scripts',
     vault: 'Historical vault of all generated documents and LaTeX sources',
     profile: 'Single source of truth used by the AI tailoring engine',
@@ -57,6 +74,38 @@ function switchTab(tabId) {
 
   if (tabId === 'pipeline') loadApplications();
   if (tabId === 'vault') loadVaultDocuments();
+  if (tabId === 'prep' && !currentPrepData) loadDedicatedPrepKit();
+}
+
+function toggleMobileSidebar() {
+  const drawer = document.getElementById('sidebar-drawer');
+  const backdrop = document.getElementById('sidebar-backdrop');
+  if (!drawer || !backdrop) return;
+  const isClosed = drawer.classList.contains('-translate-x-full');
+  if (isClosed) {
+    drawer.classList.remove('-translate-x-full');
+    backdrop.classList.remove('hidden');
+  } else {
+    closeMobileSidebar();
+  }
+}
+
+function closeMobileSidebar() {
+  const drawer = document.getElementById('sidebar-drawer');
+  const backdrop = document.getElementById('sidebar-backdrop');
+  if (drawer) drawer.classList.add('-translate-x-full');
+  if (backdrop) backdrop.classList.add('hidden');
+}
+
+function showToast(msg) {
+  const toast = document.getElementById('toast');
+  const toastMsg = document.getElementById('toast-msg');
+  if (!toast || !toastMsg) return;
+  toastMsg.innerText = msg;
+  toast.classList.remove('translate-y-20', 'opacity-0', 'pointer-events-none');
+  setTimeout(() => {
+    toast.classList.add('translate-y-20', 'opacity-0', 'pointer-events-none');
+  }, 2500);
 }
 
 // --- Subtab Navigation for Tailor Results ---
@@ -382,12 +431,116 @@ function renderInterviewPrep(prep) {
   });
 }
 
+// --- High-Fidelity PDF & Print Engine ---
+function downloadResumePdf() {
+  const container = document.getElementById('visual-resume-frame');
+  if (!container || !container.innerHTML.trim()) {
+    showToast('Please tailor an application first.');
+    return;
+  }
+  showToast('Generating official PDF resume...');
+
+  const company = (activeGeneratedPackage?.company_name || 'Shreyash_Shukla').replace(/[^a-zA-Z0-9_-]/g, '_');
+  const filename = `Shreyash_Shukla_Resume_${company}.pdf`;
+
+  const clone = document.createElement('div');
+  clone.innerHTML = container.innerHTML;
+  clone.style.width = '210mm';
+  clone.style.padding = '10mm 12mm';
+  clone.style.background = '#ffffff';
+  clone.style.color = '#0f172a';
+  clone.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
+
+  const opt = {
+    margin: [0, 0, 0, 0],
+    filename: filename,
+    image: { type: 'jpeg', quality: 0.98 },
+    html2canvas: { scale: 2, useCORS: true, letterRendering: true, scrollY: 0 },
+    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+    pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+  };
+
+  if (window.html2pdf) {
+    html2pdf().set(opt).from(clone).save().then(() => {
+      showToast('PDF downloaded successfully!');
+    }).catch(err => {
+      console.error('html2pdf error:', err);
+      printVisualResume();
+    });
+  } else {
+    printVisualResume();
+  }
+}
+
 function printVisualResume() {
-  window.print();
+  const content = document.getElementById('visual-resume-frame')?.innerHTML || '';
+  if (!content.trim()) {
+    showToast('No resume content to print.');
+    return;
+  }
+
+  const printIframe = document.createElement('iframe');
+  printIframe.style.position = 'fixed';
+  printIframe.style.right = '0';
+  printIframe.style.bottom = '0';
+  printIframe.style.width = '0';
+  printIframe.style.height = '0';
+  printIframe.style.border = '0';
+  document.body.appendChild(printIframe);
+
+  const company = activeGeneratedPackage?.company_name || 'Shreyash_Shukla';
+  const doc = printIframe.contentWindow.document;
+  doc.open();
+  doc.write(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Shreyash_Shukla_Resume_${company}</title>
+      <meta charset="utf-8">
+      <style>
+        @page { size: A4; margin: 10mm 14mm; }
+        * { box-sizing: border-box; }
+        html, body {
+          margin: 0;
+          padding: 0;
+          background: #ffffff !important;
+          color: #0f172a !important;
+          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+          font-size: 13px;
+          line-height: 1.45;
+        }
+        @media print {
+          body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        }
+      </style>
+    </head>
+    <body>
+      ${content}
+    </body>
+    </html>
+  `);
+  doc.close();
+
+  setTimeout(() => {
+    printIframe.contentWindow.focus();
+    printIframe.contentWindow.print();
+    setTimeout(() => {
+      if (document.body.contains(printIframe)) {
+        document.body.removeChild(printIframe);
+      }
+    }, 3000);
+  }, 300);
 }
 
 function downloadActiveDoc(ext) {
-  if (!activeGeneratedPackage) return;
+  if (!activeGeneratedPackage) {
+    showToast('Please tailor an application first.');
+    return;
+  }
+  if (ext === 'pdf') {
+    downloadResumePdf();
+    return;
+  }
   const content = (ext === 'tex') ? activeGeneratedPackage.tailored_cv_latex : activeGeneratedPackage.tailored_cv_text;
   const blob = new Blob([content], { type: 'text/plain' });
   const url = URL.createObjectURL(blob);
@@ -395,6 +548,7 @@ function downloadActiveDoc(ext) {
   a.href = url;
   a.download = `${activeGeneratedPackage.company_name}_Resume.${ext}`;
   a.click();
+  showToast(`Downloaded .${ext} file!`);
 }
 
 // --- Job Radar (100+ Jobs) ---
@@ -593,6 +747,8 @@ function closeModal() {
   document.getElementById('global-modal').classList.add('hidden');
 }
 
+let activeModalDoc = null;
+
 // --- Document Vault ---
 async function loadVaultDocuments() {
   const tbody = document.getElementById('vault-table-body');
@@ -610,15 +766,28 @@ async function loadVaultDocuments() {
     docs.forEach(d => {
       const tr = document.createElement('tr');
       tr.className = 'hover:bg-slate-800/40 transition';
-      tr.innerHTML = `
-        <td class="py-3 px-4 text-slate-400">${new Date(d.created_at).toLocaleDateString()}</td>
-        <td class="py-3 px-4 text-white font-bold">${d.company}</td>
-        <td class="py-3 px-4 text-slate-300">${d.role}</td>
-        <td class="py-3 px-4"><span class="px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-400 border border-purple-500/30 uppercase text-[10px] font-bold">${d.doc_type}</span></td>
-        <td class="py-3 px-4 text-right">
+      
+      let actionsHtml = '';
+      if (d.doc_type === 'cv') {
+        actionsHtml = `
+          <button onclick="previewDoc(${d.id})" class="text-blue-400 hover:text-blue-300 text-xs font-semibold mr-1.5 transition">Preview</button>
+          <button onclick="downloadDocPdf(${d.id})" class="text-emerald-400 hover:text-emerald-300 text-xs font-semibold mr-1.5 transition"><i class="fa-solid fa-file-pdf"></i> PDF</button>
+          <button onclick="downloadDoc(${d.id}, 'txt')" class="text-slate-400 hover:text-white text-xs font-mono mr-1.5 transition">.txt</button>
+          <button onclick="downloadDoc(${d.id}, 'tex')" class="text-slate-400 hover:text-white text-xs font-mono transition">.tex</button>
+        `;
+      } else {
+        actionsHtml = `
           <button onclick="previewDoc(${d.id})" class="text-blue-400 hover:text-blue-300 text-xs font-semibold mr-2 transition">Preview</button>
-          <button onclick="downloadDoc(${d.id})" class="text-emerald-400 hover:text-emerald-300 text-xs font-semibold transition">Download</button>
-        </td>
+          <button onclick="downloadDoc(${d.id}, 'txt')" class="text-emerald-400 hover:text-emerald-300 text-xs font-semibold transition">Download</button>
+        `;
+      }
+
+      tr.innerHTML = `
+        <td class="py-3 px-4 text-slate-400 whitespace-nowrap">${new Date(d.created_at).toLocaleDateString()}</td>
+        <td class="py-3 px-4 text-white font-bold whitespace-nowrap">${d.company}</td>
+        <td class="py-3 px-4 text-slate-300">${d.role}</td>
+        <td class="py-3 px-4 whitespace-nowrap"><span class="px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-400 border border-purple-500/30 uppercase text-[10px] font-bold">${d.doc_type}</span></td>
+        <td class="py-3 px-4 text-right whitespace-nowrap">${actionsHtml}</td>
       `;
       tbody.appendChild(tr);
     });
@@ -628,24 +797,213 @@ async function loadVaultDocuments() {
 }
 
 async function previewDoc(docId) {
-  const res = await fetch(`/api/documents/${docId}`);
-  if (res.ok) {
+  try {
+    const res = await fetch(`/api/documents/${docId}`);
+    if (!res.ok) return;
     const d = await res.json();
-    alert(`[${d.doc_type.toUpperCase()}] for ${d.company}:\n\n` + d.content_text.substring(0, 800) + '...');
+    activeModalDoc = d;
+
+    const modal = document.getElementById('doc-preview-modal');
+    const badge = document.getElementById('doc-modal-badge');
+    const title = document.getElementById('doc-modal-title');
+    const sub = document.getElementById('doc-modal-sub');
+    const body = document.getElementById('doc-modal-body');
+    const btnPdf = document.getElementById('doc-modal-btn-pdf');
+    const btnPrint = document.getElementById('doc-modal-btn-print');
+
+    badge.innerText = d.doc_type.toUpperCase();
+    title.innerText = `${d.company} — ${d.role}`;
+    sub.innerText = `Generated on ${new Date(d.created_at).toLocaleString()}`;
+
+    if (d.doc_type === 'cv') {
+      btnPdf.classList.remove('hidden');
+      btnPrint.classList.remove('hidden');
+      if (d.html_text) {
+        body.innerHTML = `
+          <div class="bg-white text-slate-900 p-6 sm:p-10 rounded-2xl shadow-xl overflow-x-auto max-h-[70vh] custom-scroll" id="modal-resume-render">
+            ${d.html_text}
+          </div>
+        `;
+      } else {
+        body.innerHTML = `<pre class="bg-slate-950 p-4 rounded-xl text-xs font-mono text-slate-300 whitespace-pre-wrap leading-relaxed max-h-[70vh] overflow-y-auto">${d.content_text}</pre>`;
+      }
+    } else if (d.doc_type === 'interview_prep') {
+      btnPdf.classList.remove('hidden');
+      btnPrint.classList.add('hidden');
+      try {
+        const prep = JSON.parse(d.content_text);
+        let qHtml = (prep.questions || []).map((item, i) => `
+          <div class="bg-slate-950 p-3.5 rounded-xl border border-slate-800">
+            <div class="text-xs font-bold text-white"><span class="text-purple-400 font-mono">Q${i+1}:</span> ${item.question}</div>
+            <p class="text-xs text-slate-300 font-mono mt-1.5 leading-relaxed">${item.answer}</p>
+          </div>
+        `).join('');
+
+        let starHtml = (prep.star_stories || []).map(s => `
+          <div class="bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-1 text-xs">
+            <div class="font-bold text-emerald-400">${s.title}</div>
+            <div class="text-slate-400"><strong>Action:</strong> ${s.action}</div>
+            <div class="text-slate-300"><strong>Result:</strong> ${s.result}</div>
+          </div>
+        `).join('');
+
+        body.innerHTML = `
+          <div class="space-y-4" id="modal-resume-render">
+            <div>
+              <span class="text-xs font-mono text-purple-400 font-bold uppercase block mb-1">System Design Blueprint</span>
+              <pre class="bg-slate-950 p-4 rounded-xl text-xs font-mono text-slate-300 whitespace-pre-wrap leading-relaxed max-h-48 overflow-y-auto">${prep.system_design || 'System architecture ready.'}</pre>
+            </div>
+            <div>
+              <span class="text-xs font-mono text-purple-400 font-bold uppercase block mb-1">Predicted Technical Questions</span>
+              <div class="space-y-2.5 max-h-60 overflow-y-auto custom-scroll">${qHtml}</div>
+            </div>
+            <div>
+              <span class="text-xs font-mono text-emerald-400 font-bold uppercase block mb-1">Grounded Project STAR Stories</span>
+              <div class="grid grid-cols-1 gap-2">${starHtml}</div>
+            </div>
+          </div>
+        `;
+      } catch (err) {
+        body.innerHTML = `<pre class="bg-slate-950 p-4 rounded-xl text-xs font-mono text-slate-300 whitespace-pre-wrap leading-relaxed max-h-[70vh] overflow-y-auto">${d.content_text}</pre>`;
+      }
+    } else {
+      btnPdf.classList.add('hidden');
+      btnPrint.classList.add('hidden');
+      body.innerHTML = `<pre class="bg-slate-950 p-5 rounded-xl text-xs font-mono text-slate-300 whitespace-pre-wrap leading-relaxed max-h-[70vh] overflow-y-auto">${d.content_text}</pre>`;
+    }
+
+    modal.classList.remove('hidden');
+  } catch (e) {
+    console.error(e);
   }
 }
 
-async function downloadDoc(docId) {
+function closeDocPreviewModal() {
+  document.getElementById('doc-preview-modal').classList.add('hidden');
+}
+
+async function downloadDocPdf(docId) {
+  try {
+    const res = await fetch(`/api/documents/${docId}`);
+    if (!res.ok) return;
+    const d = await res.json();
+    if (!d.html_text) {
+      downloadDoc(docId, 'txt');
+      return;
+    }
+    showToast(`Generating ${d.company} PDF...`);
+
+    const clone = document.createElement('div');
+    clone.innerHTML = d.html_text;
+    clone.style.width = '210mm';
+    clone.style.padding = '10mm 12mm';
+    clone.style.background = '#ffffff';
+    clone.style.color = '#0f172a';
+
+    const filename = `Shreyash_Shukla_Resume_${d.company.replace(/[^a-zA-Z0-9_-]/g, '_')}.pdf`;
+
+    if (window.html2pdf) {
+      html2pdf().set({
+        margin: [0, 0, 0, 0],
+        filename: filename,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true, scrollY: 0 },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      }).from(clone).save().then(() => {
+        showToast('PDF downloaded successfully!');
+      });
+    } else {
+      downloadDoc(docId, 'txt');
+    }
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+function downloadModalPdf() {
+  if (!activeModalDoc) return;
+  downloadDocPdf(activeModalDoc.id);
+}
+
+function printModalDoc() {
+  if (!activeModalDoc) return;
+  const content = document.getElementById('modal-resume-render')?.innerHTML || activeModalDoc.content_text;
+  const printIframe = document.createElement('iframe');
+  printIframe.style.position = 'fixed';
+  printIframe.style.right = '0';
+  printIframe.style.bottom = '0';
+  printIframe.style.width = '0';
+  printIframe.style.height = '0';
+  printIframe.style.border = '0';
+  document.body.appendChild(printIframe);
+
+  const doc = printIframe.contentWindow.document;
+  doc.open();
+  doc.write(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Shreyash_Shukla_Resume_${activeModalDoc.company}</title>
+      <meta charset="utf-8">
+      <style>
+        @page { size: A4; margin: 10mm 14mm; }
+        * { box-sizing: border-box; }
+        html, body {
+          margin: 0;
+          padding: 0;
+          background: #ffffff !important;
+          color: #0f172a !important;
+          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+          font-size: 13px;
+          line-height: 1.45;
+        }
+      </style>
+    </head>
+    <body>
+      ${content}
+    </body>
+    </html>
+  `);
+  doc.close();
+
+  setTimeout(() => {
+    printIframe.contentWindow.focus();
+    printIframe.contentWindow.print();
+    setTimeout(() => {
+      if (document.body.contains(printIframe)) document.body.removeChild(printIframe);
+    }, 3000);
+  }, 300);
+}
+
+function downloadModalTxt() {
+  if (!activeModalDoc) return;
+  const blob = new Blob([activeModalDoc.content_text], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${activeModalDoc.company}_${activeModalDoc.role}.${activeModalDoc.latex_text ? 'tex' : 'txt'}`;
+  a.click();
+  showToast('Downloaded text file!');
+}
+
+function copyModalContent() {
+  if (!activeModalDoc) return;
+  navigator.clipboard.writeText(activeModalDoc.content_text);
+  showToast('Copied document text to clipboard!');
+}
+
+async function downloadDoc(docId, ext = 'txt') {
   const res = await fetch(`/api/documents/${docId}`);
   if (res.ok) {
     const d = await res.json();
-    const content = d.latex_text || d.content_text;
+    const content = (ext === 'tex' && d.latex_text) ? d.latex_text : d.content_text;
     const blob = new Blob([content], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${d.company}_${d.role}_${d.doc_type}.${d.latex_text ? 'tex' : 'txt'}`;
+    a.download = `${d.company}_${d.role}_${d.doc_type}.${ext}`;
     a.click();
+    showToast(`Downloaded .${ext} file!`);
   }
 }
 
@@ -723,26 +1081,247 @@ async function handleKeysSave(e) {
 }
 
 function copyToClipboard(id) {
-  const text = document.getElementById(id).innerText;
+  const el = document.getElementById(id);
+  const text = el ? (el.innerText || el.value) : '';
   navigator.clipboard.writeText(text);
-  alert('Copied to clipboard!');
+  showToast('Copied to clipboard!');
 }
 
 function copyInterviewKit() {
+  const sysDesign = document.getElementById('prep-page-system-design')?.innerText || document.getElementById('prep-system-design')?.innerText || '';
+  const qElements = document.querySelectorAll('#prep-page-questions-list details, #prep-questions-list details');
+  const questionsText = Array.from(qElements).map(d => d.innerText).join('\n\n');
+  const starElements = document.querySelectorAll('#prep-page-star-stories > div, #prep-star-stories > div');
+  const starText = Array.from(starElements).map(d => d.innerText).join('\n\n');
+  const revText = document.getElementById('prep-page-reverse-questions')?.innerText || document.getElementById('prep-reverse-questions')?.innerText || '';
+
   const text = `
 === TECHNICAL INTERVIEW PREPARATION STRATEGY ===
 
-${document.getElementById('prep-system-design').innerText}
+=== SYSTEM DESIGN BLUEPRINT ===
+${sysDesign}
 
 === EXPECTED TECHNICAL QUESTIONS & MODEL ANSWERS ===
-${Array.from(document.querySelectorAll('#prep-questions-list details')).map(d => d.innerText).join('\n\n')}
+${questionsText}
 
 === PROJECT STAR STORIES ===
-${Array.from(document.querySelectorAll('#prep-star-stories > div')).map(d => d.innerText).join('\n\n')}
+${starText}
 
 === REVERSE QUESTIONS TO ASK ===
-${document.getElementById('prep-reverse-questions').innerText}
+${revText}
   `;
   navigator.clipboard.writeText(text.trim());
-  alert('Full interview cheat sheet copied to clipboard!');
+  showToast('Full interview cheat sheet copied!');
+}
+
+// --- Dedicated Interview Prep Suite Engine ---
+let currentPrepData = null;
+
+async function loadDedicatedPrepKit(company, role) {
+  const comp = company || document.getElementById('prep-target-company')?.value || 'ViralMe';
+  const r = role || document.getElementById('prep-target-role')?.value || 'Backend Software Engineer';
+
+  const sysEl = document.getElementById('prep-page-system-design');
+  const qList = document.getElementById('prep-page-questions-list');
+  if (sysEl) sysEl.innerText = `Analyzing ${comp} infrastructure & technical interview benchmarks...`;
+  if (qList) qList.innerHTML = '<div class="text-center py-10 font-mono text-xs text-slate-400"><i class="fa-solid fa-spinner animate-spin text-purple-400 text-lg mb-2 block"></i> Loading strategic technical questions & STAR stories...</div>';
+
+  try {
+    // 1. Try finding existing prep document
+    const resDocs = await fetch('/api/documents');
+    let prepDoc = null;
+    if (resDocs.ok) {
+      const docs = await resDocs.json();
+      const matched = docs.find(d => d.doc_type === 'interview_prep' && d.company.toLowerCase() === comp.toLowerCase());
+      if (matched) {
+        try { prepDoc = JSON.parse(matched.content_text); } catch (e) {}
+      }
+    }
+
+    // 2. If not found, request tailored bundle
+    if (!prepDoc) {
+      const tailorRes = await fetch('/api/tailor', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          company_name: comp,
+          role_title: r,
+          job_description: `Backend Software Engineer at ${comp}. Core Node.js, Express, SQL, Redis, B-Tree index optimization, microservices, and high-concurrency system design.`
+        })
+      });
+      if (tailorRes.ok) {
+        const bundle = await tailorRes.json();
+        prepDoc = bundle.interview_prep;
+      }
+    }
+
+    if (prepDoc) {
+      currentPrepData = prepDoc;
+      renderDedicatedPrepPage(comp, r, prepDoc);
+      showToast(`Interview strategy loaded for ${comp}!`);
+    }
+  } catch (e) {
+    console.error('Error loading prep kit:', e);
+    showToast('Failed to load prep kit.');
+  }
+}
+
+function renderDedicatedPrepPage(company, role, prep) {
+  const tagEl = document.getElementById('prep-domain-tag');
+  const sysEl = document.getElementById('prep-page-system-design');
+  const countEl = document.getElementById('prep-q-count');
+  const qList = document.getElementById('prep-page-questions-list');
+  const starContainer = document.getElementById('prep-page-star-stories');
+  const revList = document.getElementById('prep-page-reverse-questions');
+
+  if (tagEl) tagEl.innerText = `${company} Systems`;
+  if (sysEl) sysEl.innerText = prep.system_design || 'System architecture ready.';
+  if (countEl) countEl.innerText = `${(prep.questions || []).length} Questions`;
+
+  if (qList) {
+    qList.innerHTML = '';
+    (prep.questions || []).forEach((item, idx) => {
+      qList.innerHTML += `
+        <details class="bg-slate-950 p-4 rounded-xl border border-slate-800/80 group">
+          <summary class="text-xs font-semibold text-white cursor-pointer list-none flex items-center justify-between gap-3">
+            <div class="flex items-center gap-2">
+              <span class="text-purple-400 font-mono font-bold shrink-0">Q${idx+1}.</span>
+              <span>${item.question}</span>
+            </div>
+            <i class="fa-solid fa-chevron-down text-slate-500 text-[10px] group-open:rotate-180 transition shrink-0"></i>
+          </summary>
+          <div class="mt-3 pt-3 border-t border-slate-800/80">
+            <span class="text-[10px] font-mono uppercase text-emerald-400 font-bold block mb-1">Ideal Model Answer & Architectural Rationale:</span>
+            <p class="text-xs text-slate-300 leading-relaxed font-mono whitespace-pre-wrap">${item.answer}</p>
+          </div>
+        </details>
+      `;
+    });
+  }
+
+  if (starContainer) {
+    starContainer.innerHTML = '';
+    (prep.star_stories || []).forEach(st => {
+      starContainer.innerHTML += `
+        <div class="bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-1.5">
+          <div class="text-xs font-bold text-emerald-400 flex items-center gap-1.5">
+            <i class="fa-solid fa-star text-[10px]"></i> ${st.title}
+          </div>
+          <div class="text-[11px] text-slate-400 space-y-1 leading-snug">
+            <div><strong class="text-slate-300 font-mono">Action:</strong> ${st.action}</div>
+            <div><strong class="text-slate-300 font-mono">Result:</strong> ${st.result}</div>
+          </div>
+        </div>
+      `;
+    });
+  }
+
+  if (revList) {
+    revList.innerHTML = '';
+    (prep.reverse_questions || []).forEach(rq => {
+      revList.innerHTML += `<li>${rq}</li>`;
+    });
+  }
+}
+
+function setPrepTarget(company, role) {
+  const compInput = document.getElementById('prep-target-company');
+  const roleInput = document.getElementById('prep-target-role');
+  if (compInput) compInput.value = company;
+  if (roleInput) roleInput.value = role;
+  loadDedicatedPrepKit(company, role);
+}
+
+function downloadInterviewKitTxt() {
+  if (!currentPrepData) {
+    showToast('No prep kit loaded yet.');
+    return;
+  }
+  const comp = document.getElementById('prep-target-company')?.value || 'Tech_Company';
+  const text = `
+=== ${comp.toUpperCase()} TECHNICAL INTERVIEW STRATEGY SUITE ===
+Target: Backend Software Engineer | Candidate: Shreyash Shukla
+
+=== SYSTEM DESIGN BLUEPRINT ===
+${currentPrepData.system_design}
+
+=== TECHNICAL QUESTIONS & MODEL ANSWERS ===
+${(currentPrepData.questions || []).map((q, i) => `[Q${i+1}] ${q.question}\nANSWER: ${q.answer}\n`).join('\n')}
+
+=== PROJECT STAR STORIES (REAL PRODUCTION IMPACT) ===
+${(currentPrepData.star_stories || []).map(s => `[STORY] ${s.title}\nSituation: ${s.situation}\nTask: ${s.task}\nAction: ${s.action}\nResult: ${s.result}\n`).join('\n')}
+
+=== HIGH-LEVERAGE REVERSE QUESTIONS TO ASK ===
+${(currentPrepData.reverse_questions || []).map((r, i) => `${i+1}. ${r}`).join('\n')}
+  `;
+
+  const blob = new Blob([text.trim()], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${comp}_Interview_Prep_Strategy.txt`;
+  a.click();
+  showToast('Downloaded cheat sheet .txt');
+}
+
+function downloadInterviewKitPdf() {
+  if (!currentPrepData) {
+    showToast('No prep kit loaded yet.');
+    return;
+  }
+  const comp = document.getElementById('prep-target-company')?.value || 'Tech_Company';
+  showToast(`Generating ${comp} Interview Kit PDF...`);
+
+  const div = document.createElement('div');
+  div.style.padding = '14mm 16mm';
+  div.style.background = '#ffffff';
+  div.style.color = '#0f172a';
+  div.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+  div.style.fontSize = '12px';
+  div.style.lineHeight = '1.45';
+
+  let qHtml = (currentPrepData.questions || []).map((q, i) => `
+    <div style="margin-bottom: 12px; page-break-inside: avoid;">
+      <div style="font-weight: 700; color: #1e3a8a;">Q${i+1}: ${q.question}</div>
+      <div style="font-size: 11px; color: #334155; margin-top: 3px;">${q.answer}</div>
+    </div>
+  `).join('');
+
+  let starHtml = (currentPrepData.star_stories || []).map(s => `
+    <div style="margin-bottom: 10px; page-break-inside: avoid; background: #f8fafc; padding: 8px; border-left: 3px solid #10b981;">
+      <div style="font-weight: 700; color: #047857;">${s.title}</div>
+      <div style="font-size: 11px; color: #334155; margin-top: 2px;"><strong>Action:</strong> ${s.action}</div>
+      <div style="font-size: 11px; color: #334155;"><strong>Result:</strong> ${s.result}</div>
+    </div>
+  `).join('');
+
+  div.innerHTML = `
+    <div style="text-align: center; border-bottom: 2px solid #2563eb; padding-bottom: 8px; margin-bottom: 14px;">
+      <h1 style="font-size: 20pt; margin: 0; color: #1e3a8a;">${comp} Technical Interview Strategy</h1>
+      <p style="margin: 4px 0 0; color: #64748b; font-size: 10pt;">Candidate: Shreyash Shukla | Target: Backend Software Engineer</p>
+    </div>
+
+    <h2 style="font-size: 13pt; color: #1e3a8a; border-bottom: 1px solid #cbd5e1; padding-bottom: 2px; margin-top: 14px;">1. System Design Blueprint</h2>
+    <pre style="background: #f1f5f9; padding: 10px; border-radius: 6px; font-size: 10px; font-family: monospace; white-space: pre-wrap; line-height: 1.4;">${currentPrepData.system_design}</pre>
+
+    <h2 style="font-size: 13pt; color: #1e3a8a; border-bottom: 1px solid #cbd5e1; padding-bottom: 2px; margin-top: 14px;">2. Top Technical Questions & Model Answers</h2>
+    ${qHtml}
+
+    <h2 style="font-size: 13pt; color: #1e3a8a; border-bottom: 1px solid #cbd5e1; padding-bottom: 2px; margin-top: 14px;">3. Grounded STAR Project Stories</h2>
+    ${starHtml}
+  `;
+
+  if (window.html2pdf) {
+    html2pdf().set({
+      margin: [0, 0, 0, 0],
+      filename: `${comp}_Technical_Interview_Kit.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true, scrollY: 0 },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    }).from(div).save().then(() => {
+      showToast('Downloaded Interview Kit PDF!');
+    });
+  } else {
+    showToast('PDF ready.');
+  }
 }

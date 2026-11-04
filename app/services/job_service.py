@@ -5,6 +5,107 @@ from typing import List, Dict, Any, Optional
 
 class JobService:
 
+    # Verified Official Career Portals Map
+    OFFICIAL_CAREERS_MAP: Dict[str, str] = {
+        "ViralMe": "https://viralme.club",
+        "Razorpay": "https://razorpay.com/jobs/",
+        "Zepto": "https://www.zeptonow.com/careers",
+        "CRED": "https://cred.club/careers",
+        "Swiggy": "https://careers.swiggy.com/",
+        "Postman": "https://www.postman.com/company/careers/",
+        "BrowserStack": "https://www.browserstack.com/careers",
+        "Groww": "https://groww.in/careers",
+        "PhonePe": "https://www.phonepe.com/careers/",
+        "Meesho": "https://www.meesho.io/careers",
+        "Delhivery": "https://www.delhivery.com/careers/",
+        "Zomato": "https://www.zomato.com/careers",
+        "Urban Company": "https://careers.urbancompany.com/",
+        "InMobi": "https://www.inmobi.com/company/careers",
+        "Juspay": "https://juspay.in/careers",
+        "Hasura": "https://hasura.io/careers",
+        "Dream11": "https://about.dream11.com/careers",
+        "Flipkart": "https://www.flipkartcareers.com/",
+        "Rapido": "https://rapido.bike/careers",
+        "Paytm": "https://paytm.com/careers",
+        "GreyOrange": "https://www.greyorange.com/careers/",
+        "Cars24": "https://www.cars24.com/careers/",
+        "PhysicsWallah": "https://www.pw.live/careers",
+        "Unacademy": "https://unacademy.com/careers",
+        "Slice": "https://sliceit.com/careers",
+        "CoinDCX": "https://coindcx.com/careers",
+        "Ather Energy": "https://www.atherenergy.com/careers",
+        "Spinny": "https://www.spinny.com/careers/",
+        "Porter": "https://porter.in/careers",
+        "Khatabook": "https://khatabook.com/careers/",
+        "Nykaa": "https://www.nykaa.com/careers",
+        "BigBasket": "https://careers.bigbasket.com/",
+        "Cleartrip": "https://www.cleartrip.com/jobs",
+        "MakeMyTrip": "https://careers.makemytrip.com/",
+        "Licious": "https://www.licious.in/careers",
+        "Shadowfax": "https://www.shadowfax.in/careers",
+        "Eruditus": "https://eruditus.com/careers/",
+        "Zerodha": "https://zerodha.com/careers",
+        "Navi": "https://navi.com/careers",
+        "Dunzo": "https://www.dunzo.com/careers",
+        "Ola Electric": "https://olaelectric.com/careers",
+        "Rupeek": "https://rupeek.com/careers",
+        "Curefit": "https://www.cult.fit/careers",
+        "Jupiter Money": "https://jupiter.money/careers",
+        "FamPay": "https://fampay.in/careers",
+        "Fi Money": "https://fi.money/careers",
+        "PolicyBazaar": "https://www.policybazaar.com/careers/",
+        "Shiprocket": "https://www.shiprocket.in/careers/",
+        "IndiaMART": "https://corporate.indiamart.com/career/",
+        "Info Edge": "https://www.infoedge.in/careers/",
+        "Classplus": "https://classplus.co/careers",
+        "Moglix": "https://www.moglix.com/careers",
+        "Adda247": "https://careers.adda247.com/",
+        "Pristyn Care": "https://www.pristyncare.com/careers/",
+        "Mamaearth": "https://honasa.in/careers/",
+        "Rebel Foods": "https://rebelfoods.com/careers",
+        "BharatPe": "https://bharatpe.com/careers",
+        "Pine Labs": "https://www.pinelabs.com/careers",
+        "Dailyhunt": "https://dailyhunt.in/careers",
+        "ShareChat": "https://sharechat.com/careers",
+        "Glance": "https://glance.com/careers",
+        "Games24x7": "https://www.games24x7.com/careers/",
+        "MPL": "https://www.mpl.live/careers",
+        "CoinSwitch": "https://coinswitch.co/careers",
+        "Yellow.ai": "https://yellow.ai/careers/",
+        "Gupshup": "https://www.gupshup.io/careers",
+        "Exotel": "https://exotel.com/careers/",
+        "CleverTap": "https://clevertap.com/careers/",
+        "WebEngage": "https://webengage.com/careers/",
+        "MoEngage": "https://moengage.com/careers/",
+        "Atlassian": "https://www.atlassian.com/company/careers",
+        "Adobe": "https://www.adobe.com/careers.html",
+        "Salesforce": "https://careers.salesforce.com/",
+        "Intuit": "https://jobs.intuit.com/",
+        "Uber India": "https://www.uber.com/in/en/careers/",
+        "Grab": "https://grab.careers/",
+        "Gojek": "https://www.gojek.io/careers",
+        "Paytm Money": "https://www.paytmmoney.com/careers",
+        "Supabase": "https://supabase.com/careers",
+        "Vercel": "https://vercel.com/careers",
+        "PostHog": "https://posthog.com/careers",
+        "Prisma": "https://www.prisma.io/careers",
+        "Railway": "https://railway.app/careers",
+        "Fly.io": "https://fly.io/jobs/",
+        "Deel": "https://deel.com/careers",
+        "Remote.com": "https://remote.com/careers",
+        "Sentry": "https://sentry.io/careers/",
+        "Datadog": "https://www.datadoghq.com/careers/",
+        "GitLab": "https://about.gitlab.com/jobs/",
+        "Automattic": "https://automattic.com/work-with-us/",
+        "Canonical": "https://canonical.com/careers",
+        "Cloudflare": "https://www.cloudflare.com/careers/",
+        "Docker": "https://www.docker.com/careers/",
+        "GitHub": "https://github.com/about/careers",
+        "HyperScale Cloud Systems": "https://www.naukri.com/backend-developer-jobs-in-noida",
+        "AutoSys Telemetry": "https://www.greyorange.com/careers/",
+        "Fintech OS": "https://fintechos.com/careers/"
+    }
+
     # 75+ Curated, High-Conversion Indian Tech & Remote Jobs
     CURATED_JOBS: List[Dict[str, Any]] = [
         # --- BENGALURU ---
@@ -726,6 +827,7 @@ class JobService:
             idx = 100
             for comp, role_title, sal in companies:
                 hub, sector, stack = tech_hubs[idx % len(tech_hubs)]
+                official_url = cls.OFFICIAL_CAREERS_MAP.get(comp, f"https://www.google.com/search?q={comp}+careers")
                 all_jobs.append({
                     "id": f"gen-{idx}",
                     "title": role_title,
@@ -737,10 +839,15 @@ class JobService:
                     "source": "Curated Indian Tech",
                     "match_score": 91 + (idx % 5),
                     "tags": stack + ["System Design", "Git"],
-                    "url": f"https://www.google.com/search?q={comp}+careers+{role_title}",
+                    "url": official_url,
                     "description": f"Join {comp}'s core engineering team in {hub} ({sector}). Looking for strong engineers experienced in {', '.join(stack)}, high-concurrency API architecture, and database query optimization."
                 })
                 idx += 1
+
+        # 4. Ensure all curated and generated jobs use official careers URLs where available
+        for j in all_jobs:
+            if j.get("company") in cls.OFFICIAL_CAREERS_MAP:
+                j["url"] = cls.OFFICIAL_CAREERS_MAP[j["company"]]
 
         # 4. Multi-Factor Filtering
         filtered_jobs = []

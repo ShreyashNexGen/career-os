@@ -37,6 +37,8 @@
       }
     }
   </script>
+  <!-- Client-side PDF Generation Engine -->
+  <script src="/static/js/html2pdf.bundle.min.js"></script>
   <style>
     body { font-family: 'Inter', sans-serif; background-color: #090d16; color: #e2e8f0; }
     .glass-card {
@@ -50,41 +52,55 @@
     .custom-scroll::-webkit-scrollbar-thumb:hover { background: #3b82f6; }
 
     @media print {
-      body { background: white !important; color: black !important; }
-      body * { visibility: hidden; }
-      #printable-resume-container, #printable-resume-container * { visibility: visible; }
-      #printable-resume-container {
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 100%;
+      html, body {
+        height: auto !important;
+        overflow: visible !important;
         background: white !important;
         color: #0f172a !important;
+        margin: 0 !important;
+        padding: 0 !important;
+      }
+      aside, header, #sidebar-drawer, #bottom-nav, #sidebar-backdrop, .no-print, button {
+        display: none !important;
+      }
+      #printable-resume-container {
+        position: static !important;
+        box-shadow: none !important;
         padding: 0 !important;
         margin: 0 !important;
+        max-height: none !important;
+        overflow: visible !important;
+        width: 100% !important;
       }
-      .no-print { display: none !important; }
     }
   </style>
 </head>
-<body class="h-screen w-screen overflow-hidden flex bg-[#090d16] text-slate-200 antialiased selection:bg-blue-600 selection:text-white">
+<body class="h-screen w-screen overflow-hidden flex bg-[#090d16] text-slate-200 antialiased selection:bg-blue-600 selection:text-white relative">
 
-  <!-- Left Sidebar Navigation -->
-  <aside class="w-64 h-full bg-[#0c1222] border-r border-slate-800/80 flex flex-col justify-between shrink-0 select-none z-20">
+  <!-- Mobile Sidebar Backdrop Overlay -->
+  <div id="sidebar-backdrop" onclick="closeMobileSidebar()" class="fixed inset-0 z-40 bg-black/70 backdrop-blur-xs md:hidden hidden transition-opacity"></div>
+
+  <!-- Sidebar Navigation (Responsive Drawer on Mobile, Fixed on Desktop) -->
+  <aside id="sidebar-drawer" class="fixed inset-y-0 left-0 z-50 w-64 bg-[#0c1222] border-r border-slate-800/80 flex flex-col justify-between shrink-0 select-none transform -translate-x-full md:translate-x-0 md:static transition-transform duration-300 ease-in-out shadow-2xl md:shadow-none">
     <div class="flex-1 flex flex-col min-h-0">
       
       <!-- Brand Logo -->
-      <div class="h-16 flex items-center px-5 border-b border-slate-800/80 gap-3 shrink-0">
-        <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center font-bold text-white shadow-lg shadow-blue-500/25 shrink-0">
-          <i class="fa-solid fa-bolt"></i>
-        </div>
-        <div class="min-w-0">
-          <div class="flex items-center gap-1.5">
-            <span class="font-extrabold tracking-tight text-white text-base">CareerOS</span>
-            <span class="text-[9px] font-mono font-semibold text-blue-400 bg-blue-950/90 px-1.5 py-0.5 rounded border border-blue-500/30">PRO</span>
+      <div class="h-16 flex items-center justify-between px-5 border-b border-slate-800/80 shrink-0">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center font-bold text-white shadow-lg shadow-blue-500/25 shrink-0">
+            <i class="fa-solid fa-bolt"></i>
           </div>
-          <p class="text-[10px] text-slate-400 truncate font-mono">Job Conversion Machine</p>
+          <div class="min-w-0">
+            <div class="flex items-center gap-1.5">
+              <span class="font-extrabold tracking-tight text-white text-base">CareerOS</span>
+              <span class="text-[9px] font-mono font-semibold text-blue-400 bg-blue-950/90 px-1.5 py-0.5 rounded border border-blue-500/30">PRO</span>
+            </div>
+            <p class="text-[10px] text-slate-400 truncate font-mono">Job Conversion Machine</p>
+          </div>
         </div>
+        <button onclick="closeMobileSidebar()" class="text-slate-400 hover:text-white md:hidden p-1.5 rounded-lg hover:bg-slate-800">
+          <i class="fa-solid fa-xmark text-base"></i>
+        </button>
       </div>
 
       <!-- Navigation Links -->
@@ -97,6 +113,9 @@
         </button>
         <button onclick="switchTab('radar')" id="nav-radar" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800/60 transition">
           <i class="fa-solid fa-satellite-dish w-4 text-center text-emerald-400"></i> Job Radar (100+ Jobs)
+        </button>
+        <button onclick="switchTab('prep')" id="nav-prep" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800/60 transition">
+          <i class="fa-solid fa-brain w-4 text-center text-purple-400"></i> Interview Prep Suite
         </button>
         <button onclick="switchTab('salary')" id="nav-salary" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800/60 transition">
           <i class="fa-solid fa-calculator w-4 text-center text-emerald-400"></i> Salary & ESOPs
@@ -140,18 +159,23 @@
   <!-- Main View Area -->
   <div class="flex-1 h-full flex flex-col min-w-0 overflow-hidden">
     
-    <!-- Top Header Bar -->
-    <header class="h-16 px-6 sm:px-8 border-b border-slate-800/80 flex items-center justify-between shrink-0 bg-[#090d16]/90 backdrop-blur-md z-10">
-      <div class="min-w-0 pr-4">
-        <h2 class="text-base sm:text-lg font-bold text-white truncate" id="page-title">Applications Pipeline & Tracking</h2>
-        <p class="text-xs text-slate-400 hidden sm:block truncate" id="page-subtitle">Track, tailor, and progress your active opportunities</p>
-      </div>
-      <div class="flex items-center gap-3 shrink-0">
-        <button onclick="switchTab('tailor')" class="px-3.5 py-1.5 text-xs font-semibold rounded-xl bg-blue-600 hover:bg-blue-500 text-white transition flex items-center gap-1.5 shadow-md shadow-blue-600/25">
-          <i class="fa-solid fa-wand-magic-sparkles text-amber-300"></i> Tailor New Role
+    <!-- Top Header Bar (With Mobile Hamburger) -->
+    <header class="h-16 px-4 sm:px-8 border-b border-slate-800/80 flex items-center justify-between shrink-0 bg-[#090d16]/90 backdrop-blur-md z-10">
+      <div class="flex items-center gap-3 min-w-0 pr-2">
+        <button onclick="toggleMobileSidebar()" class="p-2 -ml-1 text-slate-400 hover:text-white md:hidden rounded-xl hover:bg-slate-800/60 transition" title="Toggle Navigation Menu">
+          <i class="fa-solid fa-bars text-lg"></i>
         </button>
-        <a href="/docs" target="_blank" class="px-3 py-1.5 text-xs font-mono font-medium rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition flex items-center gap-1.5">
-          <i class="fa-solid fa-code text-blue-400"></i> API Docs
+        <div class="min-w-0">
+          <h2 class="text-sm sm:text-lg font-bold text-white truncate" id="page-title">Applications Pipeline & Tracking</h2>
+          <p class="text-[11px] text-slate-400 hidden sm:block truncate" id="page-subtitle">Track, tailor, and progress your active opportunities</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2 sm:gap-3 shrink-0">
+        <button onclick="switchTab('tailor')" class="px-3 sm:px-3.5 py-1.5 text-xs font-semibold rounded-xl bg-blue-600 hover:bg-blue-500 text-white transition flex items-center gap-1.5 shadow-md shadow-blue-600/25">
+          <i class="fa-solid fa-wand-magic-sparkles text-amber-300"></i> <span class="hidden xs:inline">Tailor</span> Role
+        </button>
+        <a href="/docs" target="_blank" class="px-2.5 sm:px-3 py-1.5 text-xs font-mono font-medium rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition flex items-center gap-1.5">
+          <i class="fa-solid fa-code text-blue-400"></i> <span class="hidden sm:inline">API</span> Docs
         </a>
       </div>
     </header>
@@ -343,9 +367,12 @@
                 <!-- Subtab 1: Visual Resume & Print to PDF -->
                 <div id="doc-subtab-visual" class="space-y-4">
                   <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
-                    <span class="text-xs font-mono text-slate-400">Clean ATS layout • Optimized for 1-click Save to PDF</span>
-                    <div class="flex items-center gap-2">
-                      <button onclick="printVisualResume()" class="px-4 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold flex items-center gap-1.5 shadow-md shadow-blue-600/30 transition">
+                    <span class="text-xs font-mono text-slate-400">Clean ATS layout • Optimized for 1-click Direct PDF Download & Print</span>
+                    <div class="flex flex-wrap items-center gap-2">
+                      <button onclick="downloadResumePdf()" class="px-4 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold flex items-center gap-1.5 shadow-md shadow-emerald-600/30 transition">
+                        <i class="fa-solid fa-file-arrow-down"></i> Download PDF
+                      </button>
+                      <button onclick="printVisualResume()" class="px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold flex items-center gap-1.5 shadow-md shadow-blue-600/30 transition">
                         <i class="fa-solid fa-print"></i> Print / Save as PDF
                       </button>
                       <button onclick="downloadActiveDoc('tex')" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-mono border border-slate-700 transition">
@@ -590,7 +617,117 @@
       </div>
 
       <!-- ========================================== -->
-      <!-- TAB 4: SALARY & ESOP CALCULATOR            -->
+      <!-- TAB 4: INTERVIEW PREP & SIMULATOR SUITE   -->
+      <!-- ========================================== -->
+      <div id="tab-prep" class="space-y-6 hidden">
+        <!-- Target Header & Selector Card -->
+        <div class="glass-card rounded-2xl p-5 sm:p-6">
+          <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-5 border-b border-slate-800">
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="w-8 h-8 rounded-xl bg-purple-600/20 text-purple-400 border border-purple-500/30 flex items-center justify-center text-sm font-bold">
+                  <i class="fa-solid fa-brain"></i>
+                </span>
+                <h3 class="text-base sm:text-lg font-bold text-white">Technical Interview Strategy Suite</h3>
+              </div>
+              <p class="text-xs text-slate-400 mt-1">Deep-dive technical questions, real STAR project stories, and domain-tailored system design blueprints</p>
+            </div>
+
+            <!-- Action Toolbar -->
+            <div class="flex flex-wrap items-center gap-2">
+              <button onclick="downloadInterviewKitPdf()" class="px-3.5 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold flex items-center gap-1.5 shadow-md shadow-purple-600/20 transition">
+                <i class="fa-solid fa-file-pdf"></i> Download Kit PDF
+              </button>
+              <button onclick="downloadInterviewKitTxt()" class="px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-mono border border-slate-700 transition">
+                <i class="fa-solid fa-file-lines"></i> Cheat Sheet .txt
+              </button>
+              <button onclick="copyInterviewKit()" class="px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-blue-400 text-xs font-semibold border border-slate-700 transition flex items-center gap-1.5">
+                <i class="fa-regular fa-copy"></i> Copy Prep
+              </button>
+            </div>
+          </div>
+
+          <!-- Company Selector Controls -->
+          <div class="pt-5">
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+              <div class="flex-1">
+                <label class="block text-[11px] font-mono text-slate-400 mb-1">SELECT APPLIED COMPANY OR CUSTOM</label>
+                <div class="flex flex-col sm:flex-row gap-2">
+                  <input type="text" id="prep-target-company" value="ViralMe" placeholder="e.g. Razorpay, Zepto, CRED, ViralMe" class="flex-1 bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-purple-500 font-medium">
+                  <input type="text" id="prep-target-role" value="Backend Software Engineer" placeholder="e.g. Backend SDE-2" class="flex-1 bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-purple-500 font-medium">
+                  <button onclick="loadDedicatedPrepKit()" class="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold flex items-center justify-center gap-1.5 shadow-md shadow-purple-600/25 shrink-0 transition">
+                    <i class="fa-solid fa-rotate"></i> Load Strategy
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Quick Preset Pills -->
+            <div class="flex items-center gap-1.5 mt-3 overflow-x-auto custom-scroll pb-1">
+              <span class="text-[10px] font-mono text-slate-500 shrink-0">QUICK TARGETS:</span>
+              <button onclick="setPrepTarget('ViralMe', 'Backend Software Engineer')" class="px-2.5 py-0.5 rounded-full bg-slate-900 hover:bg-purple-950 text-slate-300 hover:text-purple-300 text-[11px] border border-slate-800 shrink-0 transition">ViralMe</button>
+              <button onclick="setPrepTarget('Razorpay', 'SDE-2 Core Payments')" class="px-2.5 py-0.5 rounded-full bg-slate-900 hover:bg-purple-950 text-slate-300 hover:text-purple-300 text-[11px] border border-slate-800 shrink-0 transition">Razorpay</button>
+              <button onclick="setPrepTarget('Zepto', 'Backend SDE Dark Stores')" class="px-2.5 py-0.5 rounded-full bg-slate-900 hover:bg-purple-950 text-slate-300 hover:text-purple-300 text-[11px] border border-slate-800 shrink-0 transition">Zepto</button>
+              <button onclick="setPrepTarget('CRED', 'Backend Systems & Security')" class="px-2.5 py-0.5 rounded-full bg-slate-900 hover:bg-purple-950 text-slate-300 hover:text-purple-300 text-[11px] border border-slate-800 shrink-0 transition">CRED</button>
+              <button onclick="setPrepTarget('Swiggy', 'Backend SDE-2 Delivery')" class="px-2.5 py-0.5 rounded-full bg-slate-900 hover:bg-purple-950 text-slate-300 hover:text-purple-300 text-[11px] border border-slate-800 shrink-0 transition">Swiggy</button>
+              <button onclick="setPrepTarget('Supabase', 'Postgres Realtime Backend')" class="px-2.5 py-0.5 rounded-full bg-slate-900 hover:bg-purple-950 text-slate-300 hover:text-purple-300 text-[11px] border border-slate-800 shrink-0 transition">Supabase</button>
+              <button onclick="setPrepTarget('Flipkart', 'SDE-2 Supply Chain')" class="px-2.5 py-0.5 rounded-full bg-slate-900 hover:bg-purple-950 text-slate-300 hover:text-purple-300 text-[11px] border border-slate-800 shrink-0 transition">Flipkart</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Main Strategy Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6" id="prep-kit-container">
+          <!-- Col 1: System Design & STAR Stories -->
+          <div class="space-y-6 lg:col-span-1">
+            <!-- System Design Blueprint -->
+            <div class="glass-card rounded-2xl p-5 border border-purple-500/20">
+              <div class="flex items-center justify-between pb-3 border-b border-slate-800 mb-3">
+                <h4 class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                  <i class="fa-solid fa-network-wired text-purple-400"></i> Domain System Design
+                </h4>
+                <span class="text-[10px] font-mono text-purple-400 bg-purple-950/80 px-2 py-0.5 rounded border border-purple-500/30" id="prep-domain-tag">CreatorOS Architecture</span>
+              </div>
+              <pre id="prep-page-system-design" class="bg-slate-950 p-4 rounded-xl text-xs font-mono text-slate-300 whitespace-pre-wrap leading-relaxed max-h-[320px] overflow-y-auto custom-scroll border border-slate-800/80"></pre>
+            </div>
+
+            <!-- 3 Real Project STAR Stories -->
+            <div class="glass-card rounded-2xl p-5 border border-emerald-500/20">
+              <h4 class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2 pb-3 border-b border-slate-800 mb-3">
+                <i class="fa-solid fa-star text-emerald-400"></i> Grounded STAR Stories (Real Work)
+              </h4>
+              <div class="space-y-3" id="prep-page-star-stories"></div>
+            </div>
+
+            <!-- 5 Reverse-Interview Questions -->
+            <div class="glass-card rounded-2xl p-5 border border-blue-500/20">
+              <h4 class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2 pb-3 border-b border-slate-800 mb-3">
+                <i class="fa-solid fa-comments text-blue-400"></i> High-Leverage Reverse Questions
+              </h4>
+              <ul class="space-y-2 text-xs text-slate-300 list-disc list-inside leading-relaxed" id="prep-page-reverse-questions"></ul>
+            </div>
+          </div>
+
+          <!-- Col 2: 10+ Predicted Technical Q&As -->
+          <div class="lg:col-span-2 space-y-4">
+            <div class="glass-card rounded-2xl p-5 border border-slate-800">
+              <div class="flex items-center justify-between pb-3 border-b border-slate-800 mb-4">
+                <div>
+                  <h4 class="text-sm font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-code text-blue-400"></i> High-Probability Technical Interview Q&A
+                  </h4>
+                  <p class="text-[11px] text-slate-400 mt-0.5">Model answers tailored to Node.js, Express, SQL, Redis, B-Tree indexes, and Distributed Systems</p>
+                </div>
+                <span class="text-xs font-mono text-emerald-400 bg-emerald-950/80 px-2.5 py-1 rounded-lg border border-emerald-500/30" id="prep-q-count">10 Questions</span>
+              </div>
+              <div class="space-y-3" id="prep-page-questions-list"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ========================================== -->
+      <!-- TAB 5: SALARY & ESOP CALCULATOR            -->
       <!-- ========================================== -->
       <div id="tab-salary" class="space-y-6 hidden">
         <div class="max-w-4xl mx-auto space-y-6">
@@ -802,9 +939,9 @@
   </div>
 
   <!-- Global Application & Interview Modal -->
-  <div id="global-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+  <div id="global-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 hidden">
     <div class="bg-slate-900 border border-slate-700/80 rounded-2xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden shadow-2xl">
-      <div class="p-4 sm:p-5 border-b border-slate-800 flex items-center justify-between">
+      <div class="p-4 sm:p-5 border-b border-slate-800 flex items-center justify-between shrink-0 bg-slate-950/80">
         <div>
           <h3 class="text-sm font-bold text-white flex items-center gap-2" id="modal-title">
             Application Details
@@ -820,6 +957,73 @@
         <!-- Rendered by JS -->
       </div>
     </div>
+  </div>
+
+  <!-- Dedicated Document Preview & Download Modal -->
+  <div id="doc-preview-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 hidden">
+    <div class="bg-slate-900 border border-slate-700/80 rounded-2xl w-full max-w-4xl max-h-[92vh] flex flex-col overflow-hidden shadow-2xl">
+      <div class="p-4 sm:p-5 border-b border-slate-800 flex items-center justify-between shrink-0 bg-slate-950/80">
+        <div class="min-w-0 pr-3">
+          <div class="flex items-center gap-2">
+            <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase bg-blue-500/10 text-blue-400 border border-blue-500/30" id="doc-modal-badge">CV</span>
+            <h3 class="text-sm sm:text-base font-bold text-white truncate" id="doc-modal-title">Document Preview</h3>
+          </div>
+          <p class="text-[11px] text-slate-400 truncate mt-0.5" id="doc-modal-sub">Company & Role</p>
+        </div>
+        
+        <div class="flex items-center gap-2 shrink-0">
+          <button id="doc-modal-btn-pdf" onclick="downloadModalPdf()" class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold flex items-center gap-1.5 shadow-sm transition">
+            <i class="fa-solid fa-file-arrow-down"></i> PDF
+          </button>
+          <button id="doc-modal-btn-print" onclick="printModalDoc()" class="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold flex items-center gap-1.5 shadow-sm transition hidden sm:flex">
+            <i class="fa-solid fa-print"></i> Print
+          </button>
+          <button id="doc-modal-btn-txt" onclick="downloadModalTxt()" class="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-mono border border-slate-700 transition">
+            .txt
+          </button>
+          <button id="doc-modal-btn-copy" onclick="copyModalContent()" class="p-2 rounded-xl text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 text-xs transition" title="Copy to clipboard">
+            <i class="fa-regular fa-copy"></i>
+          </button>
+          <button onclick="closeDocPreviewModal()" class="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition">
+            <i class="fa-solid fa-xmark text-base"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="p-4 sm:p-6 overflow-y-auto custom-scroll flex-1" id="doc-modal-body">
+        <!-- Rendered by JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Mobile Bottom Navigation Bar -->
+  <nav id="bottom-nav" class="fixed bottom-0 left-0 right-0 z-30 bg-[#0c1222]/95 border-t border-slate-800/90 backdrop-blur-lg flex items-center justify-around py-2 px-1 md:hidden shadow-2xl">
+    <button onclick="switchTab('pipeline')" id="bnav-pipeline" class="flex flex-col items-center gap-0.5 text-blue-500 text-[10px] font-medium py-1 px-2 transition">
+      <i class="fa-solid fa-table-columns text-sm"></i>
+      <span>Pipeline</span>
+    </button>
+    <button onclick="switchTab('tailor')" id="bnav-tailor" class="flex flex-col items-center gap-0.5 text-slate-400 text-[10px] font-medium py-1 px-2 transition">
+      <i class="fa-solid fa-wand-magic-sparkles text-sm"></i>
+      <span>Tailor</span>
+    </button>
+    <button onclick="switchTab('radar')" id="bnav-radar" class="flex flex-col items-center gap-0.5 text-slate-400 text-[10px] font-medium py-1 px-2 transition">
+      <i class="fa-solid fa-satellite-dish text-sm"></i>
+      <span>Radar</span>
+    </button>
+    <button onclick="switchTab('prep')" id="bnav-prep" class="flex flex-col items-center gap-0.5 text-slate-400 text-[10px] font-medium py-1 px-2 transition">
+      <i class="fa-solid fa-brain text-sm"></i>
+      <span>Prep</span>
+    </button>
+    <button onclick="switchTab('vault')" id="bnav-vault" class="flex flex-col items-center gap-0.5 text-slate-400 text-[10px] font-medium py-1 px-2 transition">
+      <i class="fa-solid fa-folder-open text-sm"></i>
+      <span>Vault</span>
+    </button>
+  </nav>
+
+  <!-- Global Toast Feedback -->
+  <div id="toast" class="fixed bottom-16 sm:bottom-6 right-6 z-50 bg-slate-900 border border-emerald-500/40 text-white text-xs font-semibold px-4 py-2.5 rounded-xl shadow-2xl flex items-center gap-2 transform translate-y-20 opacity-0 pointer-events-none transition-all duration-300">
+    <i class="fa-solid fa-circle-check text-emerald-400"></i>
+    <span id="toast-msg">Action completed!</span>
   </div>
 
   <script src="/static/js/app.js"></script>
