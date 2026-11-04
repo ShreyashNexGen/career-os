@@ -14,6 +14,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   await loadSettings();
   loadRadarJobs();
   calculateSalary();
+  loadDedicatedPrepKit('ViralMe', 'Backend Software Engineer');
 });
 
 // --- Tab Navigation ---
@@ -288,8 +289,9 @@ async function handleStatusChange(appId, newStatus) {
       body: JSON.stringify({ status: newStatus })
     });
     loadApplications();
+    showToast(`Status updated to ${newStatus}!`);
   } catch (e) {
-    alert('Error updating status');
+    showToast('Error updating status');
   }
 }
 
@@ -298,8 +300,9 @@ async function deleteApp(appId) {
   try {
     await fetch(`/api/applications/${appId}`, { method: 'DELETE' });
     loadApplications();
+    showToast('Application removed');
   } catch (e) {
-    alert('Error deleting application');
+    showToast('Error deleting application');
   }
 }
 
@@ -378,7 +381,7 @@ async function handleTailorSubmit(e) {
     document.getElementById('tailor-results').scrollIntoView({ behavior: 'smooth' });
     loadApplications();
   } catch (err) {
-    alert(err.message || 'Error tailoring application');
+    showToast(err.message || 'Error tailoring application');
   } finally {
     btn.disabled = false;
     btn.innerHTML = '<i class="fa-solid fa-bolt"></i> Generate Complete Job Pack';
@@ -431,7 +434,7 @@ function renderInterviewPrep(prep) {
   });
 }
 
-// --- High-Fidelity PDF & Print Engine ---
+// --- High-Fidelity PDF & Isolated Print Engine ---
 function downloadResumePdf() {
   const container = document.getElementById('visual-resume-frame');
   if (!container || !container.innerHTML.trim()) {
@@ -443,13 +446,19 @@ function downloadResumePdf() {
   const company = (activeGeneratedPackage?.company_name || 'Shreyash_Shukla').replace(/[^a-zA-Z0-9_-]/g, '_');
   const filename = `Shreyash_Shukla_Resume_${company}.pdf`;
 
-  const clone = document.createElement('div');
-  clone.innerHTML = container.innerHTML;
-  clone.style.width = '210mm';
-  clone.style.padding = '10mm 12mm';
-  clone.style.background = '#ffffff';
-  clone.style.color = '#0f172a';
-  clone.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
+  // Attach temporary container to DOM so html2canvas computes valid layout & metrics
+  const exportDiv = document.createElement('div');
+  exportDiv.id = 'pdf-export-active-resume';
+  exportDiv.innerHTML = container.innerHTML;
+  exportDiv.style.position = 'fixed';
+  exportDiv.style.left = '-9999px';
+  exportDiv.style.top = '0';
+  exportDiv.style.width = '794px'; // 210mm in pixels at 96 DPI
+  exportDiv.style.padding = '32px 36px';
+  exportDiv.style.background = '#ffffff';
+  exportDiv.style.color = '#0f172a';
+  exportDiv.style.zIndex = '-9999';
+  document.body.appendChild(exportDiv);
 
   const opt = {
     margin: [0, 0, 0, 0],
@@ -461,13 +470,16 @@ function downloadResumePdf() {
   };
 
   if (window.html2pdf) {
-    html2pdf().set(opt).from(clone).save().then(() => {
+    html2pdf().set(opt).from(exportDiv).save().then(() => {
       showToast('PDF downloaded successfully!');
     }).catch(err => {
       console.error('html2pdf error:', err);
       printVisualResume();
+    }).finally(() => {
+      if (exportDiv.parentNode) exportDiv.parentNode.removeChild(exportDiv);
     });
   } else {
+    if (exportDiv.parentNode) exportDiv.parentNode.removeChild(exportDiv);
     printVisualResume();
   }
 }
@@ -478,27 +490,26 @@ function printVisualResume() {
     showToast('No resume content to print.');
     return;
   }
+  const company = (activeGeneratedPackage?.company_name || 'Shreyash_Shukla').replace(/[^a-zA-Z0-9_-]/g, '_');
+  printResumeHtml(content, company);
+}
 
-  const printIframe = document.createElement('iframe');
-  printIframe.style.position = 'fixed';
-  printIframe.style.right = '0';
-  printIframe.style.bottom = '0';
-  printIframe.style.width = '0';
-  printIframe.style.height = '0';
-  printIframe.style.border = '0';
-  document.body.appendChild(printIframe);
-
-  const company = activeGeneratedPackage?.company_name || 'Shreyash_Shukla';
-  const doc = printIframe.contentWindow.document;
-  doc.open();
-  doc.write(`
+function printResumeHtml(contentHtml, companyName) {
+  const comp = (companyName || 'Target').replace(/[^a-zA-Z0-9_-]/g, '_');
+  const printWin = window.open('', '_blank', 'width=850,height=1000');
+  if (!printWin) {
+    showToast('Please allow popups to print/save resume.');
+    return;
+  }
+  printWin.document.open();
+  printWin.document.write(`
     <!DOCTYPE html>
     <html>
     <head>
-      <title>Shreyash_Shukla_Resume_${company}</title>
+      <title>Shreyash_Shukla_Resume_${comp}</title>
       <meta charset="utf-8">
       <style>
-        @page { size: A4; margin: 10mm 14mm; }
+        @page { size: A4; margin: 12mm 14mm; }
         * { box-sizing: border-box; }
         html, body {
           margin: 0;
@@ -515,21 +526,18 @@ function printVisualResume() {
       </style>
     </head>
     <body>
-      ${content}
+      ${contentHtml}
+      <script>
+        window.onload = function() {
+          window.focus();
+          window.print();
+          window.onafterprint = function() { window.close(); };
+        };
+      <\/script>
     </body>
     </html>
   `);
-  doc.close();
-
-  setTimeout(() => {
-    printIframe.contentWindow.focus();
-    printIframe.contentWindow.print();
-    setTimeout(() => {
-      if (document.body.contains(printIframe)) {
-        document.body.removeChild(printIframe);
-      }
-    }, 3000);
-  }, 300);
+  printWin.document.close();
 }
 
 function downloadActiveDoc(ext) {
@@ -568,9 +576,11 @@ async function loadRadarJobs() {
 
 function applyRadarFilters() {
   const query = (document.getElementById('radar-search').value || '').trim().toLowerCase();
-  const loc = document.getElementById('radar-filter-loc').value;
-  const role = document.getElementById('radar-filter-role').value;
-  const sort = document.getElementById('radar-filter-sort').value;
+  const compType = (document.getElementById('radar-filter-company')?.value || 'all').toLowerCase();
+  const salRange = (document.getElementById('radar-filter-salary')?.value || 'all').toLowerCase();
+  const loc = (document.getElementById('radar-filter-loc')?.value || 'all').toLowerCase();
+  const role = (document.getElementById('radar-filter-role')?.value || 'all').toLowerCase();
+  const sort = document.getElementById('radar-filter-sort')?.value || 'score';
 
   let filtered = allRadarJobs.filter(j => {
     // Search query
@@ -579,19 +589,30 @@ function applyRadarFilters() {
       if (!match.includes(query)) return false;
     }
 
+    // Company Type
+    if (compType !== 'all') {
+      if ((j.company_type || '').toLowerCase() !== compType) return false;
+    }
+
+    // Salary Range
+    if (salRange !== 'all') {
+      if ((j.salary_range || '').toLowerCase() !== salRange) return false;
+    }
+
     // Location
     if (loc !== 'all') {
-      const jLoc = j.location.toLowerCase();
+      const jLoc = (j.location || '').toLowerCase();
       if (loc === 'bengaluru' && !jLoc.includes('bengaluru')) return false;
       if (loc === 'delhi_ncr' && (!jLoc.includes('noida') && !jLoc.includes('gurgaon') && !jLoc.includes('delhi'))) return false;
       if (loc === 'remote_india' && (!jLoc.includes('remote') || jLoc.includes('global') || jLoc.includes('worldwide'))) return false;
-      if (loc === 'global_remote' && (!jLoc.includes('worldwide') && !jLoc.includes('global') && !jLoc.includes('$') && !jLoc.includes('€'))) return false;
+      if (loc === 'global_remote' && (!jLoc.includes('worldwide') && !jLoc.includes('global') && !jLoc.includes('$'))) return false;
     }
 
     // Role
     if (role !== 'all') {
-      if (role === 'backend' && !j.title.toLowerCase().includes('backend') && j.role_type !== 'backend') return false;
-      if (role === 'fullstack' && !j.title.toLowerCase().includes('full') && j.role_type !== 'fullstack') return false;
+      const jTitle = (j.title || '').toLowerCase();
+      if (role === 'backend' && !jTitle.includes('backend') && j.role_type !== 'backend') return false;
+      if (role === 'fullstack' && !jTitle.includes('full') && j.role_type !== 'fullstack') return false;
       if (role === 'sde1' && j.level !== 'sde1') return false;
       if (role === 'sde2' && j.level !== 'sde2') return false;
     }
@@ -603,11 +624,12 @@ function applyRadarFilters() {
   if (sort === 'score') {
     filtered.sort((a, b) => (b.match_score || 0) - (a.match_score || 0));
   } else if (sort === 'company') {
-    filtered.sort((a, b) => a.company.localeCompare(b.company));
+    filtered.sort((a, b) => (a.company || '').localeCompare(b.company || ''));
   }
 
   // Update badge count
-  document.getElementById('radar-count-badge').innerText = `${filtered.length} Active Jobs`;
+  const countBadge = document.getElementById('radar-count-badge');
+  if (countBadge) countBadge.innerText = `${filtered.length} Active Jobs`;
 
   renderRadarGrid(filtered);
 }
@@ -627,23 +649,42 @@ function renderRadarGrid(jobs) {
     
     const tagsHtml = (job.tags || []).slice(0, 4).map(t => `<span class="px-2 py-0.5 rounded bg-slate-800 text-[10px] font-mono text-slate-300 border border-slate-700/60">${t}</span>`).join('');
 
+    const compTypeBadge = job.company_type === 'startup' ? '<span class="text-[9px] font-mono px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-300 border border-amber-500/20 font-bold uppercase">Startup</span>' :
+                          (job.company_type === 'mnc' ? '<span class="text-[9px] font-mono px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-300 border border-blue-500/20 font-bold uppercase">Tier-1 MNC</span>' :
+                          '<span class="text-[9px] font-mono px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-300 border border-purple-500/20 font-bold uppercase">Cloud/DevTools</span>');
+
+    const jobUrl = job.url || `https://www.google.com/search?q=${encodeURIComponent(job.company + ' careers')}`;
+
     card.innerHTML = `
       <div>
-        <div class="flex items-center justify-between gap-2 mb-2">
-          <span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-bold">${job.match_score}% Match</span>
+        <div class="flex items-center justify-between gap-2 mb-2.5">
+          <div class="flex items-center gap-1.5">
+            <span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-bold">${job.match_score}% Match</span>
+            ${compTypeBadge}
+          </div>
           <span class="text-[10px] font-mono text-slate-400 bg-slate-900 px-2 py-0.5 rounded border border-slate-800">${job.source}</span>
         </div>
-        <h4 class="text-sm font-bold text-white mb-1 leading-snug">${job.title}</h4>
-        <p class="text-xs font-semibold text-blue-400 mb-2">${job.company} <span class="text-slate-500 font-normal">• ${job.location}</span></p>
+        <a href="${jobUrl}" target="_blank" class="block group" title="Open official job posting">
+          <h4 class="text-sm font-bold text-white group-hover:text-blue-400 mb-1 leading-snug transition flex items-center justify-between">
+            <span>${job.title}</span>
+            <i class="fa-solid fa-arrow-up-right-from-square text-[11px] text-slate-500 group-hover:text-blue-400 ml-1.5 shrink-0 opacity-70"></i>
+          </h4>
+        </a>
+        <p class="text-xs font-semibold text-blue-400 mb-2">
+          <a href="${jobUrl}" target="_blank" class="hover:underline">${job.company}</a>
+          <span class="text-slate-500 font-normal">• ${job.location}</span>
+        </p>
         <p class="text-[11px] text-slate-400 line-clamp-3 mb-3 leading-relaxed">${job.description}</p>
         <div class="flex flex-wrap gap-1 mb-4">${tagsHtml}</div>
       </div>
       <div class="pt-3 border-t border-slate-800 flex items-center justify-between gap-2">
         <span class="text-[10px] font-mono text-emerald-400 font-semibold">${job.salary || 'Competitive'}</span>
         <div class="flex items-center gap-1.5">
-          ${job.url ? `<a href="${job.url}" target="_blank" class="p-1.5 rounded-lg text-slate-400 hover:text-white bg-slate-900 border border-slate-800 text-xs" title="Open Official Link"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>` : ''}
+          <a href="${jobUrl}" target="_blank" class="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-[11px] font-medium transition flex items-center gap-1.5" title="Direct to Official Portal">
+            <i class="fa-solid fa-arrow-up-right-from-square text-emerald-400"></i> Direct Apply
+          </a>
           <button onclick='tailorFromRadar(${JSON.stringify(job).replace(/'/g, "&#39;")})' class="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-semibold transition flex items-center gap-1.5 shadow-sm">
-            <i class="fa-solid fa-wand-magic-sparkles text-amber-300"></i> Tailor & Apply
+            <i class="fa-solid fa-wand-magic-sparkles text-amber-300"></i> Tailor Pack
           </button>
         </div>
       </div>
@@ -887,36 +928,49 @@ async function downloadDocPdf(docId) {
     const res = await fetch(`/api/documents/${docId}`);
     if (!res.ok) return;
     const d = await res.json();
-    if (!d.html_text) {
-      downloadDoc(docId, 'txt');
-      return;
-    }
     showToast(`Generating ${d.company} PDF...`);
 
-    const clone = document.createElement('div');
-    clone.innerHTML = d.html_text;
-    clone.style.width = '210mm';
-    clone.style.padding = '10mm 12mm';
-    clone.style.background = '#ffffff';
-    clone.style.color = '#0f172a';
+    const resumeHtml = d.html_text || `<div style="padding:24px; font-family:sans-serif; white-space:pre-wrap; color:#0f172a; background:#ffffff;">${d.content_text}</div>`;
+    
+    // Create temporary export container attached to document body
+    const exportDiv = document.createElement('div');
+    exportDiv.id = 'pdf-export-vault-temp';
+    exportDiv.innerHTML = resumeHtml;
+    exportDiv.style.position = 'fixed';
+    exportDiv.style.left = '-9999px';
+    exportDiv.style.top = '0';
+    exportDiv.style.width = '794px'; // 210mm in pixels at 96 DPI
+    exportDiv.style.padding = '32px 36px';
+    exportDiv.style.background = '#ffffff';
+    exportDiv.style.color = '#0f172a';
+    exportDiv.style.zIndex = '-9999';
+    document.body.appendChild(exportDiv);
 
-    const filename = `Shreyash_Shukla_Resume_${d.company.replace(/[^a-zA-Z0-9_-]/g, '_')}.pdf`;
+    const filename = `Shreyash_Shukla_Resume_${(d.company || 'Role').replace(/[^a-zA-Z0-9_-]/g, '_')}.pdf`;
 
     if (window.html2pdf) {
-      html2pdf().set({
-        margin: [0, 0, 0, 0],
-        filename: filename,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, scrollY: 0 },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-      }).from(clone).save().then(() => {
+      try {
+        await html2pdf().set({
+          margin: [0, 0, 0, 0],
+          filename: filename,
+          image: { type: 'jpeg', quality: 0.98 },
+          html2canvas: { scale: 2, useCORS: true, scrollY: 0 },
+          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        }).from(exportDiv).save();
         showToast('PDF downloaded successfully!');
-      });
+      } catch (err) {
+        console.error('html2pdf generation error:', err);
+        printResumeHtml(resumeHtml, d.company);
+      } finally {
+        if (exportDiv.parentNode) exportDiv.parentNode.removeChild(exportDiv);
+      }
     } else {
-      downloadDoc(docId, 'txt');
+      if (exportDiv.parentNode) exportDiv.parentNode.removeChild(exportDiv);
+      printResumeHtml(resumeHtml, d.company);
     }
   } catch (e) {
     console.error(e);
+    showToast('Failed to generate PDF');
   }
 }
 
@@ -928,51 +982,7 @@ function downloadModalPdf() {
 function printModalDoc() {
   if (!activeModalDoc) return;
   const content = document.getElementById('modal-resume-render')?.innerHTML || activeModalDoc.content_text;
-  const printIframe = document.createElement('iframe');
-  printIframe.style.position = 'fixed';
-  printIframe.style.right = '0';
-  printIframe.style.bottom = '0';
-  printIframe.style.width = '0';
-  printIframe.style.height = '0';
-  printIframe.style.border = '0';
-  document.body.appendChild(printIframe);
-
-  const doc = printIframe.contentWindow.document;
-  doc.open();
-  doc.write(`
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <title>Shreyash_Shukla_Resume_${activeModalDoc.company}</title>
-      <meta charset="utf-8">
-      <style>
-        @page { size: A4; margin: 10mm 14mm; }
-        * { box-sizing: border-box; }
-        html, body {
-          margin: 0;
-          padding: 0;
-          background: #ffffff !important;
-          color: #0f172a !important;
-          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-          font-size: 13px;
-          line-height: 1.45;
-        }
-      </style>
-    </head>
-    <body>
-      ${content}
-    </body>
-    </html>
-  `);
-  doc.close();
-
-  setTimeout(() => {
-    printIframe.contentWindow.focus();
-    printIframe.contentWindow.print();
-    setTimeout(() => {
-      if (document.body.contains(printIframe)) document.body.removeChild(printIframe);
-    }, 3000);
-  }, 300);
+  printResumeHtml(content, activeModalDoc.company);
 }
 
 function downloadModalTxt() {
@@ -1042,9 +1052,9 @@ async function handleProfileSave(e) {
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify(payload)
     });
-    alert('Candidate profile updated successfully!');
+    showToast('Candidate profile updated successfully!');
   } catch (e) {
-    alert('Error saving profile');
+    showToast('Error saving profile');
   }
 }
 
@@ -1073,10 +1083,10 @@ async function handleKeysSave(e) {
         preferred_ai: gemini ? 'gemini' : (groq ? 'groq' : 'offline')
       })
     });
-    alert('AI keys configured! Your searches will now be accelerated by free AI.');
+    showToast('AI keys configured successfully!');
     initUser();
   } catch (e) {
-    alert('Error saving keys');
+    showToast('Error saving keys');
   }
 }
 
@@ -1121,13 +1131,22 @@ async function loadDedicatedPrepKit(company, role) {
   const comp = company || document.getElementById('prep-target-company')?.value || 'ViralMe';
   const r = role || document.getElementById('prep-target-role')?.value || 'Backend Software Engineer';
 
-  const sysEl = document.getElementById('prep-page-system-design');
-  const qList = document.getElementById('prep-page-questions-list');
-  if (sysEl) sysEl.innerText = `Analyzing ${comp} infrastructure & technical interview benchmarks...`;
-  if (qList) qList.innerHTML = '<div class="text-center py-10 font-mono text-xs text-slate-400"><i class="fa-solid fa-spinner animate-spin text-purple-400 text-lg mb-2 block"></i> Loading strategic technical questions & STAR stories...</div>';
+  try {
+    // 1. Instant deterministic kit from endpoint
+    const instantRes = await fetch(`/api/prep/instant?company=${encodeURIComponent(comp)}&role=${encodeURIComponent(r)}`);
+    if (instantRes.ok) {
+      const prepDoc = await instantRes.json();
+      currentPrepData = prepDoc;
+      renderDedicatedPrepPage(comp, r, prepDoc);
+      showToast(`Interview strategy loaded for ${comp}!`);
+      return;
+    }
+  } catch (e) {
+    console.warn('Instant prep endpoint skipped, checking vault...', e);
+  }
 
   try {
-    // 1. Try finding existing prep document
+    // 2. Try finding existing prep document
     const resDocs = await fetch('/api/documents');
     let prepDoc = null;
     if (resDocs.ok) {
@@ -1135,23 +1154,6 @@ async function loadDedicatedPrepKit(company, role) {
       const matched = docs.find(d => d.doc_type === 'interview_prep' && d.company.toLowerCase() === comp.toLowerCase());
       if (matched) {
         try { prepDoc = JSON.parse(matched.content_text); } catch (e) {}
-      }
-    }
-
-    // 2. If not found, request tailored bundle
-    if (!prepDoc) {
-      const tailorRes = await fetch('/api/tailor', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({
-          company_name: comp,
-          role_title: r,
-          job_description: `Backend Software Engineer at ${comp}. Core Node.js, Express, SQL, Redis, B-Tree index optimization, microservices, and high-concurrency system design.`
-        })
-      });
-      if (tailorRes.ok) {
-        const bundle = await tailorRes.json();
-        prepDoc = bundle.interview_prep;
       }
     }
 

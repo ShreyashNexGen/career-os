@@ -381,9 +381,25 @@ def get_radar_jobs(
     query: str = "all",
     location: str = "all",
     role_type: str = "all",
-    limit: int = 150
+    company_type: str = "all",
+    salary_range: str = "all",
+    limit: int = 200
 ):
-    return JobService.fetch_radar_jobs(query=query, location=location, role_type=role_type, limit=limit)
+    return JobService.fetch_radar_jobs(
+        query=query,
+        location=location,
+        role_type=role_type,
+        company_type=company_type,
+        salary_range=salary_range,
+        limit=limit
+    )
+
+# ==========================================
+# INSTANT INTERVIEW PREP GENERATOR
+# ==========================================
+@app.get("/api/prep/instant")
+def get_instant_interview_prep(company: str = "ViralMe", role: str = "Backend Software Engineer"):
+    return AIService.get_instant_interview_prep(company=company, role=role)
 
 # ==========================================
 # SALARY BENCHMARK CALCULATOR

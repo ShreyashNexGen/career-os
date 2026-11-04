@@ -283,6 +283,18 @@ Kind regards,
 {candidate.get('name', 'Shreyash Shukla')}
 """
 
+    @classmethod
+    def get_instant_interview_prep(cls, company: str, role: str) -> Dict[str, Any]:
+        candidate = {
+            "name": "Shreyash Shukla",
+            "phone": "+91 6306211105",
+            "email": "shreyashshukla7398554573@gmail.com",
+            "location": "Noida, India",
+            "github_url": "https://github.com/shreyash418",
+            "linkedin_url": "https://linkedin.com/in/shuklashreyash"
+        }
+        return cls._build_interview_prep(candidate, company, role, ["Node.js", "Express", "Python", "SQL", "Redis", "Microservices", "System Design"])
+
     @staticmethod
     def _build_interview_prep(candidate: Dict[str, Any], company: str, role: str, matched_skills: List[str]) -> Dict[str, Any]:
         """Generates comprehensive interview prep with questions, STAR stories, system design, and reverse questions."""
