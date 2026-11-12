@@ -70,6 +70,7 @@ class Application(Base):
     contact_name = Column(String(255), nullable=True)
     contact_channel = Column(String(100), nullable=True)
     job_url = Column(Text, nullable=True)
+    jd_text = Column(Text, nullable=True)
     notes = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -93,3 +94,25 @@ class GeneratedDocument(Base):
 
     user = relationship("User", back_populates="documents")
     application = relationship("Application", back_populates="documents")
+
+class LearningProgress(Base):
+    __tablename__ = "learning_progress"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    category = Column(String(50), nullable=False, index=True) # dsa, sysdesign, corecs
+    item_id = Column(String(100), nullable=False, index=True)
+    status = Column(String(30), default="todo") # todo, solved, revisit
+    notes = Column(Text, nullable=True)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+class DailyMomentum(Base):
+    __tablename__ = "daily_momentum"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    date_str = Column(String(20), nullable=False, index=True) # YYYY-MM-DD
+    apps_count = Column(Integer, default=0)
+    dsa_count = Column(Integer, default=0)
+    design_count = Column(Integer, default=0)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

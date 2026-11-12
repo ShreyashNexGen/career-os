@@ -5,11 +5,14 @@ let currentTab = 'pipeline';
 let currentDocSubTab = 'visual';
 let allRadarJobs = [];
 let activeGeneratedPackage = null;
+let allApplicationsMap = {};
+let activeDetailAppId = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
   await initUser();
   await loadStats();
   await loadApplications();
+  await loadMomentum();
   await loadProfile();
   await loadSettings();
   loadRadarJobs();
@@ -20,7 +23,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 // --- Tab Navigation ---
 function switchTab(tabId) {
   currentTab = tabId;
-  const tabs = ['pipeline', 'tailor', 'radar', 'prep', 'salary', 'vault', 'profile', 'settings'];
+  const tabs = ['pipeline', 'tailor', 'radar', 'dsa', 'sysdesign', 'corecs', 'prep', 'salary', 'vault', 'profile', 'settings'];
   tabs.forEach(t => {
     const el = document.getElementById(`tab-${t}`);
     const navBtn = document.getElementById(`nav-${t}`);
@@ -35,7 +38,7 @@ function switchTab(tabId) {
   });
 
   // Highlight Mobile Bottom Bar
-  const bnavTabs = ['pipeline', 'tailor', 'radar', 'prep', 'vault'];
+  const bnavTabs = ['pipeline', 'radar', 'dsa', 'sysdesign', 'prep'];
   bnavTabs.forEach(b => {
     const bBtn = document.getElementById(`bnav-${b}`);
     if (bBtn) {
@@ -52,22 +55,28 @@ function switchTab(tabId) {
   const titles = {
     pipeline: 'Applications Pipeline & Tracking',
     tailor: '1-Click AI Document Tailor',
-    radar: 'Automated Job Radar (100+ Active Jobs)',
-    prep: 'Technical Interview Strategy Suite',
+    radar: 'Job Radar & LinkedIn Fresh-Jobs Sniper',
+    dsa: 'Top 200 DSA Pattern Hub (Python & C++)',
+    sysdesign: 'System Design Made Easy & Case Studies',
+    corecs: 'Backend Core CS Rapid-Fire Sheet',
+    prep: 'Technical Interview Strategy & Grill Suite',
     salary: 'Salary Benchmark & ESOP Calculator',
     vault: 'Document & CV Archive Vault',
     profile: 'Candidate Master Profile',
-    settings: 'Free AI Engine Settings'
+    settings: 'Free AI Engine & DB Settings'
   };
   const subtitles = {
-    pipeline: 'Track, tailor, and progress your active opportunities',
-    tailor: 'Generate tailored ATS resumes, letters, outreach, and interview kits in seconds',
-    radar: 'Scrapes live tech postings matching your skill profile',
-    prep: 'Domain architecture blueprints, 10+ technical Q&As, and grounded STAR stories',
+    pipeline: 'Compact Kanban, full JD details, and 3-day follow-up tracker',
+    tailor: 'Generate tailored ATS resumes, cover letters, outreach DMs, and interview prep',
+    radar: 'Live Greenhouse ATS boards, curated Indian startups & 1-click LinkedIn sniper',
+    dsa: '15 core patterns, 30-second recognition tricks, Python/C++ solutions & AI Tutor',
+    sysdesign: 'Visual building blocks + 8 HLD/LLD case studies with AI Staff review',
+    corecs: 'SQL Window functions, DBMS MVCC/ACID, OS locks & HTTP/JWT internals',
+    prep: 'Mock Interview Grill Mode, domain blueprints, technical Q&As & STAR stories',
     salary: 'Expected market CTC, stock options, and word-for-word negotiation scripts',
     vault: 'Historical vault of all generated documents and LaTeX sources',
     profile: 'Single source of truth used by the AI tailoring engine',
-    settings: 'Configure free Google Gemini or Groq API keys'
+    settings: 'Groq / Gemini AI keys & persistent Supabase setup guide'
   };
 
   document.getElementById('page-title').innerText = titles[tabId] || 'CareerOS';
@@ -76,6 +85,9 @@ function switchTab(tabId) {
   if (tabId === 'pipeline') loadApplications();
   if (tabId === 'vault') loadVaultDocuments();
   if (tabId === 'prep' && !currentPrepData) loadDedicatedPrepKit();
+  if (tabId === 'dsa' && allDsaProblems.length === 0) loadDsaHub();
+  if (tabId === 'sysdesign' && !sysDesignLoaded) loadSysDesignHub();
+  if (tabId === 'corecs' && coreCsTopics.length === 0) loadCoreCsHub();
 }
 
 function toggleMobileSidebar() {
@@ -197,8 +209,11 @@ async function loadApplications() {
 
     Object.values(cols).forEach(c => { if (c) c.innerHTML = ''; });
     const counts = { discovered: 0, drafted: 0, applied: 0, interview: 0, offer: 0 };
+    allApplicationsMap = {};
+    const followUpDue = [];
 
     apps.forEach(app => {
+      allApplicationsMap[app.id] = app;
       const statusKey = (app.status === 'hired') ? 'offer' : (cols[app.status] ? app.status : 'discovered');
       counts[statusKey] = (counts[statusKey] || 0) + 1;
       
@@ -206,40 +221,41 @@ async function loadApplications() {
         ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' 
         : (app.fit_score >= 70 ? 'bg-blue-500/10 text-blue-400 border-blue-500/30' : 'bg-amber-500/10 text-amber-400 border-amber-500/30');
 
-      // Calculate days elapsed
       const createdDate = new Date(app.created_at);
       const diffDays = Math.floor((new Date() - createdDate) / (1000 * 60 * 60 * 24));
       const daysText = diffDays === 0 ? "Today" : `${diffDays}d ago`;
-
-      const showFollowUpBadge = (app.status === 'applied' && diffDays >= 4);
+      const showFollowUpBadge = (app.status === 'applied' && diffDays >= 3);
+      if (showFollowUpBadge) followUpDue.push({ app, diffDays });
 
       const card = document.createElement('div');
-      card.className = 'glass-card rounded-xl p-3.5 space-y-2.5 border border-slate-700/60 hover:border-blue-500/60 hover:shadow-lg hover:shadow-blue-500/10 transition-all';
+      card.className = 'glass-card rounded-xl p-2.5 space-y-2 border border-slate-700/60 hover:border-blue-500/60 hover:shadow-lg hover:shadow-blue-500/10 transition-all cursor-pointer';
+      card.onclick = (e) => {
+        if (e.target.closest('select') || e.target.closest('button') || e.target.closest('a')) return;
+        openAppDetailModal(app.id);
+      };
       
       card.innerHTML = `
         <div class="flex items-center justify-between gap-1.5">
-          <div class="flex items-center gap-2 min-w-0">
-            <span class="w-6 h-6 rounded-lg bg-blue-600/20 text-blue-400 border border-blue-500/30 flex items-center justify-center font-bold text-xs uppercase shrink-0">
+          <div class="flex items-center gap-1.5 min-w-0">
+            <span class="w-5 h-5 rounded-md bg-blue-600/20 text-blue-400 border border-blue-500/30 flex items-center justify-center font-bold text-[10px] uppercase shrink-0">
               ${(app.company || 'C')[0]}
             </span>
-            <div class="font-bold text-white text-xs truncate max-w-[125px]">${app.company}</div>
+            <div class="font-bold text-white text-xs truncate">${app.company}</div>
           </div>
-          <span class="text-[10px] font-mono px-2 py-0.5 rounded-full border ${fitBadgeClass} font-bold shrink-0">
+          <span class="text-[10px] font-mono px-1.5 py-0.5 rounded-full border ${fitBadgeClass} font-bold shrink-0">
             ${app.fit_score}%
           </span>
         </div>
 
-        <div class="text-[11px] font-medium text-slate-300 leading-snug line-clamp-1">${app.role}</div>
-
-        <div class="flex items-center justify-between text-[10px] text-slate-400 font-mono">
-          <span>Added: ${daysText}</span>
-          ${showFollowUpBadge ? '<span class="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 font-bold">Follow-Up Ready</span>' : ''}
+        <div class="flex items-center justify-between gap-2 text-[11px]">
+          <span class="font-medium text-slate-300 truncate">${app.role}</span>
+          <span class="text-[9px] text-slate-500 font-mono shrink-0">${daysText}</span>
         </div>
 
-        ${app.notes ? `<div class="text-[10px] text-slate-400 italic line-clamp-2 leading-relaxed bg-slate-950/40 p-2 rounded-lg border border-slate-800/40">${app.notes}</div>` : ''}
+        ${showFollowUpBadge ? '<div class="text-[9px] font-mono px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 font-bold inline-block">3d+ Follow-Up Due</div>' : ''}
 
-        <div class="pt-2 border-t border-slate-800/70 flex items-center justify-between text-[10px] gap-2">
-          <select onchange="handleStatusChange(${app.id}, this.value)" class="bg-slate-950 border border-slate-800 text-[10px] text-slate-300 rounded-lg px-2 py-1 focus:outline-none focus:border-blue-500 transition">
+        <div class="pt-1.5 border-t border-slate-800/70 flex items-center justify-between text-[10px] gap-1">
+          <select onchange="handleStatusChange(${app.id}, this.value)" class="bg-slate-950 border border-slate-800 text-[10px] text-slate-300 rounded-lg px-1.5 py-1 focus:outline-none focus:border-blue-500 transition min-w-0 max-w-[92px]">
             <option value="discovered" ${app.status === 'discovered' ? 'selected' : ''}>Discovered</option>
             <option value="drafted" ${app.status === 'drafted' ? 'selected' : ''}>Drafted</option>
             <option value="applied" ${app.status === 'applied' ? 'selected' : ''}>Applied</option>
@@ -248,11 +264,14 @@ async function loadApplications() {
             <option value="rejected" ${app.status === 'rejected' ? 'selected' : ''}>Rejected</option>
           </select>
           
-          <div class="flex items-center gap-1.5">
-            <button onclick="openInterviewModal(${app.id}, '${app.company.replace(/'/g, "\\'")}', '${app.role.replace(/'/g, "\\'")}')" title="Interview Prep Kit" class="text-purple-400 hover:text-purple-300 text-xs px-1.5 py-0.5 rounded bg-purple-950/50 border border-purple-500/30 transition">
-              <i class="fa-solid fa-brain"></i> Prep
+          <div class="flex items-center gap-1 shrink-0">
+            <button onclick="openAppDetailModal(${app.id})" title="View Full JD & Notes" class="text-sky-400 hover:text-sky-300 text-[11px] p-1 rounded bg-sky-950/40 border border-sky-500/30 transition">
+              <i class="fa-solid fa-expand"></i>
             </button>
-            <button onclick="deleteApp(${app.id})" title="Remove" class="text-slate-500 hover:text-rose-400 text-xs p-1 rounded transition">
+            <button onclick="openInterviewModal(${app.id}, '${app.company.replace(/'/g, "\\'")}', '${app.role.replace(/'/g, "\\'")}')" title="Interview Prep Kit" class="text-purple-400 hover:text-purple-300 text-[11px] p-1 rounded bg-purple-950/50 border border-purple-500/30 transition">
+              <i class="fa-solid fa-brain"></i>
+            </button>
+            <button onclick="deleteApp(${app.id})" title="Remove" class="text-slate-500 hover:text-rose-400 text-[11px] p-1 rounded transition">
               <i class="fa-solid fa-trash-can"></i>
             </button>
           </div>
@@ -265,9 +284,9 @@ async function loadApplications() {
       const colEl = cols[k];
       if (colEl && counts[k] === 0) {
         colEl.innerHTML = `
-          <div class="h-32 border-2 border-dashed border-slate-800/80 rounded-xl flex flex-col items-center justify-center p-4 text-center select-none">
-            <i class="fa-regular fa-folder-open text-slate-700 text-lg mb-1"></i>
-            <span class="text-[11px] text-slate-500 font-medium">No roles in this stage</span>
+          <div class="h-24 border-2 border-dashed border-slate-800/80 rounded-xl flex flex-col items-center justify-center p-3 text-center select-none">
+            <i class="fa-regular fa-folder-open text-slate-700 text-base mb-1"></i>
+            <span class="text-[11px] text-slate-500 font-medium">No roles here</span>
           </div>
         `;
       }
@@ -275,7 +294,26 @@ async function loadApplications() {
       if (countEl) countEl.innerText = counts[k];
     });
 
+    // Update 3-Day Follow-Up Banner
+    const fuBanner = document.getElementById('followup-queue-banner');
+    if (fuBanner) {
+      if (followUpDue.length > 0) {
+        fuBanner.classList.remove('hidden');
+        document.getElementById('followup-queue-count').innerText = `${followUpDue.length} Due`;
+        document.getElementById('followup-queue-names').innerText =
+          `Ready for polite Day 3+ bump: ${followUpDue.map(x => `${x.app.company} (${x.diffDays}d)`).join(', ')}`;
+        document.getElementById('followup-queue-actions').innerHTML = followUpDue.slice(0, 3).map(x => `
+          <button onclick="copyFollowUpTemplate('${x.app.company.replace(/'/g, "\\'")}', '${x.app.role.replace(/'/g, "\\'")}')" class="px-2.5 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 text-[11px] font-semibold transition">
+            <i class="fa-regular fa-copy"></i> DM ${x.app.company}
+          </button>
+        `).join('');
+      } else {
+        fuBanner.classList.add('hidden');
+      }
+    }
+
     loadStats();
+    loadMomentum();
   } catch (e) {
     console.error('Error loading applications:', e);
   }
@@ -1314,6 +1352,11 @@ function downloadInterviewKitPdf() {
   `;
 
   if (window.html2pdf) {
+    div.style.position = 'fixed';
+    div.style.left = '-9999px';
+    div.style.top = '0';
+    div.style.width = '794px';
+    document.body.appendChild(div);
     html2pdf().set({
       margin: [0, 0, 0, 0],
       filename: `${comp}_Technical_Interview_Kit.pdf`,
@@ -1322,8 +1365,807 @@ function downloadInterviewKitPdf() {
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
     }).from(div).save().then(() => {
       showToast('Downloaded Interview Kit PDF!');
+    }).finally(() => {
+      if (div.parentNode) div.parentNode.removeChild(div);
     });
   } else {
     showToast('PDF ready.');
+  }
+}
+
+// ==========================================
+// MOBILE KANBAN SWITCHER & APPLICATION DETAILS
+// ==========================================
+function setMobileKanbanStage(stage) {
+  const stages = ['discovered', 'drafted', 'applied', 'interview', 'offer'];
+  stages.forEach(s => {
+    const wrap = document.getElementById(`kanban-wrap-${s}`);
+    if (wrap) {
+      if (stage === 'all' || stage === s) wrap.classList.remove('hidden');
+      else wrap.classList.add('hidden');
+    }
+    const pill = document.getElementById(`mstage-${s}`);
+    if (pill) {
+      pill.className = (stage === s)
+        ? 'px-3 py-1.5 rounded-full bg-blue-600 text-white text-[11px] font-semibold shrink-0 transition'
+        : 'px-3 py-1.5 rounded-full bg-slate-900 text-slate-300 border border-slate-800 text-[11px] font-medium shrink-0 transition';
+    }
+  });
+  const allPill = document.getElementById('mstage-all');
+  if (allPill) {
+    allPill.className = (stage === 'all')
+      ? 'px-3 py-1.5 rounded-full bg-blue-600 text-white text-[11px] font-semibold shrink-0 transition'
+      : 'px-3 py-1.5 rounded-full bg-slate-900 text-slate-300 border border-slate-800 text-[11px] font-medium shrink-0 transition';
+  }
+}
+
+function openAppDetailModal(appId) {
+  const app = allApplicationsMap[appId];
+  if (!app) return;
+  activeDetailAppId = appId;
+
+  document.getElementById('ad-fit-badge').innerText = `${app.fit_score}% Match`;
+  document.getElementById('ad-company-title').innerText = `${app.company} — ${app.role}`;
+  const created = new Date(app.created_at).toLocaleDateString();
+  document.getElementById('ad-meta').innerText = `Stage: ${(app.status || 'discovered').toUpperCase()} • Added: ${created}`;
+
+  const linkEl = document.getElementById('ad-open-link');
+  if (app.job_url) {
+    linkEl.href = app.job_url;
+    linkEl.classList.remove('hidden');
+  } else {
+    linkEl.href = `https://www.google.com/search?q=${encodeURIComponent(app.company + ' careers')}`;
+  }
+
+  document.getElementById('ad-jd-box').innerText = app.jd_text || app.notes || 'No full JD saved yet. Use Tailor or Quick Import to attach the full description.';
+  document.getElementById('ad-notes-input').value = app.notes || '';
+  document.getElementById('ad-screen-q').value = '';
+  document.getElementById('ad-screen-ans-wrap').classList.add('hidden');
+  document.getElementById('app-detail-modal').classList.remove('hidden');
+}
+
+function closeAppDetailModal() {
+  document.getElementById('app-detail-modal').classList.add('hidden');
+  activeDetailAppId = null;
+}
+
+async function saveAppDetailNotes() {
+  if (!activeDetailAppId) return;
+  const notes = document.getElementById('ad-notes-input').value;
+  try {
+    const res = await fetch(`/api/applications/${activeDetailAppId}`, {
+      method: 'PUT',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ notes })
+    });
+    if (res.ok) {
+      showToast('Application notes saved!');
+      loadApplications();
+    }
+  } catch (e) {
+    showToast('Error saving notes');
+  }
+}
+
+function copyFollowUpTemplate(company, role) {
+  const msg = `Hi [Hiring Manager/Recruiter],\n\nFollowing up politely on my application for the ${role} role at ${company}. With 2+ years building 250+ RESTful APIs in Node.js & Python and cutting SQL transaction latency by 35% via composite indexing, I'd love a brief chat on how I can contribute immediately to your backend systems.\n\nBest,\nShreyash Shukla\nhttps://linkedin.com/in/shuklashreyash`;
+  navigator.clipboard.writeText(msg);
+  showToast(`Copied 3-Day Follow-Up DM for ${company}!`);
+}
+
+function copyAppFollowUpDm() {
+  const app = allApplicationsMap[activeDetailAppId];
+  if (!app) return;
+  copyFollowUpTemplate(app.company, app.role);
+}
+
+async function generateAppScreeningAnswer() {
+  const app = allApplicationsMap[activeDetailAppId];
+  const question = document.getElementById('ad-screen-q').value.trim();
+  if (!app || !question) {
+    showToast('Enter a screening question first.');
+    return;
+  }
+  const btn = document.getElementById('btn-ad-screen');
+  btn.disabled = true; btn.innerText = 'Thinking...';
+  try {
+    const res = await fetch('/api/ai/screening-answer', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        company: app.company,
+        role: app.role,
+        question,
+        jd_text: app.jd_text || app.notes || ''
+      })
+    });
+    if (res.ok) {
+      const data = await res.json();
+      document.getElementById('ad-screen-ans').innerText = data.answer;
+      document.getElementById('ad-screen-ans-wrap').classList.remove('hidden');
+      showToast(`Generated via ${data.provider}!`);
+    }
+  } catch (e) {
+    showToast('Failed to generate screening answer');
+  } finally {
+    btn.disabled = false; btn.innerText = 'Generate Answer';
+  }
+}
+
+// ==========================================
+// DAILY MOMENTUM TRACKER
+// ==========================================
+async function loadMomentum() {
+  try {
+    const res = await fetch('/api/momentum');
+    if (!res.ok) return;
+    const m = await res.json();
+    const aEl = document.getElementById('mom-apps');
+    const dEl = document.getElementById('mom-dsa');
+    const sEl = document.getElementById('mom-design');
+    if (aEl) aEl.innerText = `${m.apps_count}/3`;
+    if (dEl) dEl.innerText = `${m.dsa_count}/2`;
+    if (sEl) sEl.innerText = `${m.design_count}/1`;
+  } catch (e) {}
+}
+
+async function bumpMomentum(metric) {
+  try {
+    const res = await fetch('/api/momentum', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ metric, delta: 1 })
+    });
+    if (res.ok) {
+      loadMomentum();
+      showToast(`Momentum logged (+1 ${metric.toUpperCase()})!`);
+    }
+  } catch (e) {}
+}
+
+// ==========================================
+// LINKEDIN SNIPER & QUICK JD IMPORT
+// ==========================================
+function toggleRadarMobileFilters() {
+  const panel = document.getElementById('radar-filters-panel');
+  if (panel) panel.classList.toggle('hidden');
+}
+
+function launchLinkedInSniper() {
+  const keywords = document.getElementById('sniper-role')?.value || 'Backend Engineer Node.js Python';
+  const loc = document.getElementById('sniper-loc')?.value || 'India';
+  const tpr = document.getElementById('sniper-time')?.value || 'r86400';
+  const easy = document.getElementById('sniper-easy-apply')?.checked;
+  const early = document.getElementById('sniper-early')?.checked;
+
+  let url = `https://www.linkedin.com/jobs/search/?keywords=${encodeURIComponent(keywords)}&location=${encodeURIComponent(loc)}&f_TPR=${encodeURIComponent(tpr)}&sortBy=DD`;
+  if (easy) url += '&f_AL=true';
+  if (early) url += '&f_EA=true';
+
+  window.open(url, '_blank');
+  showToast('Opened LinkedIn Fresh-Jobs Sniper!');
+}
+
+function openQuickImportModal() {
+  document.getElementById('quick-import-modal').classList.remove('hidden');
+}
+
+function closeQuickImportModal() {
+  document.getElementById('quick-import-modal').classList.add('hidden');
+}
+
+async function saveQuickImportToKanban() {
+  const company = document.getElementById('qi-company').value.trim() || 'LinkedIn Lead';
+  const role = document.getElementById('qi-role').value.trim() || 'Backend Software Engineer';
+  const job_url = document.getElementById('qi-url').value.trim();
+  const jd_text = document.getElementById('qi-jd').value.trim();
+
+  try {
+    const res = await fetch('/api/applications', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        company,
+        role,
+        status: 'discovered',
+        fit_score: 88,
+        job_url: job_url || null,
+        jd_text: jd_text || null,
+        notes: 'Imported from LinkedIn / External Board'
+      })
+    });
+    if (res.ok) {
+      closeQuickImportModal();
+      showToast(`Saved ${company} to Pipeline!`);
+      loadApplications();
+      switchTab('pipeline');
+    }
+  } catch (e) {
+    showToast('Error importing application');
+  }
+}
+
+function tailorQuickImport() {
+  const company = document.getElementById('qi-company').value.trim() || 'Target Company';
+  const role = document.getElementById('qi-role').value.trim() || 'Backend Software Engineer';
+  const url = document.getElementById('qi-url').value.trim();
+  const jd = document.getElementById('qi-jd').value.trim();
+
+  document.getElementById('tailor-company').value = company;
+  document.getElementById('tailor-role').value = role;
+  document.getElementById('tailor-jd').value = (url ? `URL: ${url}\n\n` : '') + jd;
+  closeQuickImportModal();
+  switchTab('tailor');
+}
+
+// ==========================================
+// TOP 200 DSA HUB (PYTHON & C++ + AI TUTOR)
+// ==========================================
+let allDsaProblems = [];
+let dsaPatterns = [];
+let activeDsaProblem = null;
+let activeDsaLang = 'python';
+
+async function loadDsaHub() {
+  try {
+    const res = await fetch('/api/dsa');
+    if (!res.ok) return;
+    const data = await res.json();
+    allDsaProblems = data.problems || [];
+    dsaPatterns = data.patterns || [];
+
+    const patSelect = document.getElementById('dsa-filter-pattern');
+    if (patSelect && patSelect.options.length <= 1) {
+      dsaPatterns.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p;
+        opt.innerText = p;
+        patSelect.appendChild(opt);
+      });
+    }
+
+    updateDsaProgressHeader(data.stats);
+    applyDsaFilters();
+  } catch (e) {
+    console.error('Error loading DSA Hub:', e);
+  }
+}
+
+function updateDsaProgressHeader(stats) {
+  const solved = stats ? stats.solved : allDsaProblems.filter(p => p.status === 'solved').length;
+  const revisit = stats ? stats.revisit : allDsaProblems.filter(p => p.status === 'revisit').length;
+  const total = allDsaProblems.length || 200;
+
+  const sEl = document.getElementById('dsa-solved-count');
+  const rEl = document.getElementById('dsa-revisit-count');
+  const barEl = document.getElementById('dsa-progress-bar');
+  if (sEl) sEl.innerText = solved;
+  if (rEl) rEl.innerText = revisit;
+  if (barEl) barEl.style.width = `${Math.round((solved / total) * 100)}%`;
+}
+
+function filterDsaRevision() {
+  document.getElementById('dsa-filter-status').value = 'revisit';
+  applyDsaFilters();
+}
+
+function applyDsaFilters() {
+  const q = (document.getElementById('dsa-search')?.value || '').trim().toLowerCase();
+  const pat = document.getElementById('dsa-filter-pattern')?.value || 'all';
+  const diff = document.getElementById('dsa-filter-diff')?.value || 'all';
+  const st = document.getElementById('dsa-filter-status')?.value || 'all';
+
+  const filtered = allDsaProblems.filter(p => {
+    if (pat !== 'all' && p.pattern !== pat) return false;
+    if (diff !== 'all' && p.difficulty !== diff) return false;
+    if (st !== 'all' && p.status !== st) return false;
+    if (q) {
+      const hay = `${p.num} ${p.title} ${p.pattern} ${p.trick} ${(p.companies || []).join(' ')}`.toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+
+  renderDsaList(filtered);
+}
+
+function renderDsaList(list) {
+  const container = document.getElementById('dsa-problems-list');
+  if (!container) return;
+  container.innerHTML = '';
+
+  if (list.length === 0) {
+    container.innerHTML = '<div class="p-8 text-center text-xs text-slate-500">No DSA problems match your filters. Try clearing filters!</div>';
+    return;
+  }
+
+  list.forEach(p => {
+    const diffCls = p.difficulty === 'Easy' ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20'
+      : (p.difficulty === 'Medium' ? 'text-amber-400 bg-amber-500/10 border-amber-500/20' : 'text-rose-400 bg-rose-500/10 border-rose-500/20');
+    const stBadge = p.status === 'solved'
+      ? '<span class="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 text-[10px] font-bold">Solved ✓</span>'
+      : (p.status === 'revisit'
+        ? '<span class="px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30 text-[10px] font-bold">Revise ↻</span>'
+        : '<span class="px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 text-[10px]">Todo</span>');
+
+    const row = document.createElement('div');
+    row.className = 'p-3.5 sm:px-5 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 hover:bg-slate-800/40 cursor-pointer transition';
+    row.onclick = () => openDsaModal(p.id);
+    row.innerHTML = `
+      <div class="min-w-0 flex-1 space-y-1">
+        <div class="flex items-center gap-2 flex-wrap">
+          <span class="text-[11px] font-mono text-slate-500 font-bold">#${p.num}</span>
+          <span class="text-xs sm:text-sm font-bold text-white hover:text-cyan-300 transition">${p.title}</span>
+          <span class="text-[10px] font-mono px-1.5 py-0.5 rounded border ${diffCls}">${p.difficulty}</span>
+          <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-900 text-cyan-300 border border-slate-800">${p.pattern}</span>
+        </div>
+        <p class="text-[11px] text-slate-400 line-clamp-1"><strong class="text-amber-300/90">Trick:</strong> ${p.trick}</p>
+      </div>
+      <div class="flex items-center justify-between sm:justify-end gap-2 shrink-0">
+        <div class="flex items-center gap-1">
+          ${(p.companies || []).slice(0, 2).map(c => `<span class="text-[9px] font-mono px-1.5 py-0.5 rounded bg-slate-900 text-slate-400 border border-slate-800">${c}</span>`).join('')}
+        </div>
+        ${stBadge}
+      </div>
+    `;
+    container.appendChild(row);
+  });
+}
+
+function openDsaModal(problemId) {
+  const p = allDsaProblems.find(x => x.id === problemId);
+  if (!p) return;
+  activeDsaProblem = p;
+
+  document.getElementById('dsa-m-num').innerText = `#${p.num}`;
+  document.getElementById('dsa-m-diff').innerText = p.difficulty;
+  document.getElementById('dsa-m-comp').innerText = p.complexity;
+  document.getElementById('dsa-m-title').innerText = p.title;
+  document.getElementById('dsa-m-pattern').innerText = p.pattern;
+  document.getElementById('dsa-m-lc').href = p.leetcode_url;
+  document.getElementById('dsa-m-trick').innerText = p.trick;
+  document.getElementById('dsa-m-intuition').innerText = p.intuition;
+  document.getElementById('dsa-m-notes').value = p.notes || '';
+  document.getElementById('dsa-ai-input').value = '';
+  document.getElementById('dsa-ai-output').classList.add('hidden');
+
+  highlightDsaStatusButtons(p.status);
+  switchDsaLang(activeDsaLang);
+  document.getElementById('dsa-study-modal').classList.remove('hidden');
+}
+
+function closeDsaModal() {
+  document.getElementById('dsa-study-modal').classList.add('hidden');
+}
+
+function switchDsaLang(lang) {
+  activeDsaLang = lang;
+  if (!activeDsaProblem) return;
+  const codeEl = document.getElementById('dsa-m-code');
+  const pyBtn = document.getElementById('dsa-lang-py');
+  const cppBtn = document.getElementById('dsa-lang-cpp');
+
+  if (lang === 'python') {
+    codeEl.innerText = activeDsaProblem.python_code;
+    pyBtn.className = 'px-3 py-1 rounded-lg bg-cyan-600 text-white text-xs font-semibold transition';
+    cppBtn.className = 'px-3 py-1 rounded-lg text-slate-400 hover:text-white text-xs font-semibold transition';
+  } else {
+    codeEl.innerText = activeDsaProblem.cpp_code;
+    cppBtn.className = 'px-3 py-1 rounded-lg bg-cyan-600 text-white text-xs font-semibold transition';
+    pyBtn.className = 'px-3 py-1 rounded-lg text-slate-400 hover:text-white text-xs font-semibold transition';
+  }
+}
+
+function highlightDsaStatusButtons(status) {
+  ['todo', 'solved', 'revisit'].forEach(st => {
+    const btn = document.getElementById(`dsa-st-${st}`);
+    if (!btn) return;
+    if (st === status) {
+      const col = st === 'solved' ? 'bg-emerald-600 text-white border-emerald-500'
+        : (st === 'revisit' ? 'bg-amber-600 text-white border-amber-500' : 'bg-blue-600 text-white border-blue-500');
+      btn.className = `px-3 py-1 rounded-lg text-xs font-bold border transition ${col}`;
+    } else {
+      btn.className = 'px-3 py-1 rounded-lg text-xs font-semibold border border-slate-700 bg-slate-900 text-slate-400 hover:text-white transition';
+    }
+  });
+}
+
+async function setActiveDsaStatus(newStatus) {
+  if (!activeDsaProblem) return;
+  try {
+    const res = await fetch('/api/learning/progress', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ category: 'dsa', item_id: activeDsaProblem.id, status: newStatus })
+    });
+    if (res.ok) {
+      activeDsaProblem.status = newStatus;
+      highlightDsaStatusButtons(newStatus);
+      updateDsaProgressHeader();
+      applyDsaFilters();
+      loadMomentum();
+      showToast(`Marked #${activeDsaProblem.num} as ${newStatus}!`);
+    }
+  } catch (e) {
+    showToast('Error saving DSA progress');
+  }
+}
+
+async function saveActiveDsaNotes() {
+  if (!activeDsaProblem) return;
+  const notes = document.getElementById('dsa-m-notes').value;
+  try {
+    const res = await fetch('/api/learning/progress', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ category: 'dsa', item_id: activeDsaProblem.id, status: activeDsaProblem.status, notes })
+    });
+    if (res.ok) {
+      activeDsaProblem.notes = notes;
+      showToast('DSA notes saved!');
+    }
+  } catch (e) {
+    showToast('Error saving notes');
+  }
+}
+
+async function askDsaAiTutor(mode) {
+  if (!activeDsaProblem) return;
+  const out = document.getElementById('dsa-ai-output');
+  const userInput = document.getElementById('dsa-ai-input').value.trim();
+  out.classList.remove('hidden');
+  out.innerText = 'AI Tutor analyzing in ' + (activeDsaLang === 'cpp' ? 'C++17' : 'Python 3') + '...';
+
+  try {
+    const res = await fetch('/api/dsa/ai-tutor', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        problem_id: activeDsaProblem.id,
+        title: activeDsaProblem.title,
+        pattern: activeDsaProblem.pattern,
+        language: activeDsaLang,
+        mode,
+        user_input: userInput
+      })
+    });
+    if (res.ok) {
+      const data = await res.json();
+      out.innerText = `[Engine: ${data.provider.toUpperCase()}]\n\n${data.response}`;
+    }
+  } catch (e) {
+    out.innerText = 'Error reaching AI Tutor.';
+  }
+}
+
+// ==========================================
+// SYSTEM DESIGN ACADEMY (HLD & LLD)
+// ==========================================
+let sysDesignLoaded = false;
+let sdBlocks = [];
+let sdCases = [];
+let sdProgress = {};
+let activeCaseStudy = null;
+let activeSdCodeLang = 'python';
+
+async function loadSysDesignHub() {
+  try {
+    const res = await fetch('/api/sysdesign');
+    if (!res.ok) return;
+    const data = await res.json();
+    sdBlocks = data.building_blocks || [];
+    sdCases = data.case_studies || [];
+    sdProgress = data.progress || {};
+    sysDesignLoaded = true;
+
+    renderSdBlocks();
+    renderSdCasesSidebar();
+    if (sdCases.length > 0) selectCaseStudy(sdCases[0].id);
+  } catch (e) {
+    console.error('Error loading System Design Academy:', e);
+  }
+}
+
+function switchSysDesignSubtab(sub) {
+  const bPanel = document.getElementById('sd-panel-blocks');
+  const cPanel = document.getElementById('sd-panel-cases');
+  const bBtn = document.getElementById('sd-sub-blocks');
+  const cBtn = document.getElementById('sd-sub-cases');
+
+  if (sub === 'blocks') {
+    bPanel.classList.remove('hidden'); cPanel.classList.add('hidden');
+    bBtn.className = 'px-3.5 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-semibold transition';
+    cBtn.className = 'px-3.5 py-1.5 rounded-lg text-slate-400 hover:text-white text-xs font-semibold transition';
+  } else {
+    cPanel.classList.remove('hidden'); bPanel.classList.add('hidden');
+    cBtn.className = 'px-3.5 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-semibold transition';
+    bBtn.className = 'px-3.5 py-1.5 rounded-lg text-slate-400 hover:text-white text-xs font-semibold transition';
+  }
+}
+
+function renderSdBlocks() {
+  const container = document.getElementById('sd-panel-blocks');
+  if (!container) return;
+  container.innerHTML = sdBlocks.map(b => `
+    <div class="glass-card rounded-2xl p-5 border border-slate-800 space-y-3">
+      <div class="flex items-center justify-between gap-2">
+        <h4 class="text-sm font-bold text-white">${b.title}</h4>
+        <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-indigo-500/15 text-indigo-300 border border-indigo-500/30 shrink-0">${b.tag}</span>
+      </div>
+      <p class="text-xs text-amber-300/90 font-medium">${b.summary}</p>
+      <p class="text-xs text-slate-300 leading-relaxed">${b.intuition}</p>
+      <ul class="space-y-1 text-[11px] text-slate-400 list-disc pl-4">
+        ${(b.key_rules || []).map(r => `<li>${r}</li>`).join('')}
+      </ul>
+      <pre class="bg-slate-950 p-3 rounded-xl border border-slate-800/80 text-[11px] font-mono text-emerald-300 overflow-x-auto custom-scroll">${b.diagram}</pre>
+    </div>
+  `).join('');
+}
+
+function renderSdCasesSidebar() {
+  const sb = document.getElementById('sd-cases-sidebar');
+  if (!sb) return;
+  sb.innerHTML = sdCases.map(c => {
+    const active = activeCaseStudy && activeCaseStudy.id === c.id;
+    const studied = sdProgress[c.id] === 'solved';
+    const typeCol = c.type === 'LLD' ? 'bg-amber-500/15 text-amber-300 border-amber-500/30' : 'bg-purple-500/15 text-purple-300 border-purple-500/30';
+    return `
+      <button onclick="selectCaseStudy('${c.id}')" class="w-full text-left p-3.5 rounded-xl border transition ${active ? 'bg-indigo-600/20 border-indigo-500' : 'bg-slate-900/70 border-slate-800 hover:border-slate-700'}">
+        <div class="flex items-center justify-between gap-2 mb-1">
+          <span class="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded border ${typeCol}">${c.type}</span>
+          ${studied ? '<span class="text-[10px] text-emerald-400 font-bold">Studied ✓</span>' : ''}
+        </div>
+        <div class="text-xs font-bold text-white leading-snug">${c.title}</div>
+      </button>
+    `;
+  }).join('');
+}
+
+function selectCaseStudy(caseId) {
+  const c = sdCases.find(x => x.id === caseId);
+  if (!c) return;
+  activeCaseStudy = c;
+  renderSdCasesSidebar();
+
+  const detail = document.getElementById('sd-case-detail');
+  const hasCode = Boolean(c.python_code || c.cpp_code);
+  const studied = sdProgress[c.id] === 'solved';
+
+  detail.innerHTML = `
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
+      <div>
+        <div class="flex flex-wrap items-center gap-1.5 mb-1">
+          <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-indigo-500/15 text-indigo-300 border border-indigo-500/30">${c.type} CASE STUDY</span>
+          ${(c.companies || []).map(co => `<span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-900 text-slate-400 border border-slate-800">${co}</span>`).join('')}
+        </div>
+        <h4 class="text-base font-bold text-white">${c.title}</h4>
+        <p class="text-[11px] font-mono text-emerald-400 mt-0.5">${c.scale}</p>
+      </div>
+      <button onclick="markSysDesignStudied('${c.id}')" class="px-3.5 py-1.5 rounded-xl text-xs font-bold border transition shrink-0 ${studied ? 'bg-emerald-600 text-white border-emerald-500' : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700'}">
+        ${studied ? 'Studied ✓' : 'Mark Studied'}
+      </button>
+    </div>
+
+    <p class="text-xs text-slate-300 leading-relaxed">${c.summary}</p>
+
+    <div>
+      <span class="text-[11px] font-mono uppercase text-purple-400 font-bold block mb-1.5">Architecture Flow Diagram</span>
+      <pre class="bg-slate-950 p-3.5 rounded-xl border border-slate-800 text-xs font-mono text-emerald-300 overflow-x-auto custom-scroll">${c.diagram}</pre>
+    </div>
+
+    <div class="space-y-2">
+      <span class="text-[11px] font-mono uppercase text-blue-400 font-bold block">End-to-End Walkthrough</span>
+      <div class="space-y-2">
+        ${(c.steps || []).map(s => `<div class="bg-slate-950/70 p-3 rounded-xl border border-slate-800/80 text-xs text-slate-300 leading-relaxed">${s}</div>`).join('')}
+      </div>
+    </div>
+
+    <div class="space-y-1.5">
+      <span class="text-[11px] font-mono uppercase text-amber-400 font-bold block">Key Engineering Trade-Offs</span>
+      <ul class="space-y-1.5 text-xs text-slate-300 list-disc pl-4">
+        ${(c.tradeoffs || []).map(t => `<li>${t}</li>`).join('')}
+      </ul>
+    </div>
+
+    ${hasCode ? `
+      <div class="bg-slate-950 border border-slate-800 rounded-xl overflow-hidden">
+        <div class="flex items-center justify-between px-3 py-2 border-b border-slate-800 bg-slate-900/80">
+          <div class="flex items-center gap-1.5">
+            <button onclick="switchSdCodeLang('python')" id="sd-lang-py" class="px-3 py-1 rounded-lg bg-cyan-600 text-white text-xs font-semibold">Python OOP</button>
+            <button onclick="switchSdCodeLang('cpp')" id="sd-lang-cpp" class="px-3 py-1 rounded-lg text-slate-400 hover:text-white text-xs font-semibold">C++17 OOP</button>
+          </div>
+          <button onclick="copyToClipboard('sd-case-code')" class="text-xs text-blue-400 hover:text-blue-300 font-medium flex items-center gap-1">
+            <i class="fa-regular fa-copy"></i> Copy Code
+          </button>
+        </div>
+        <pre id="sd-case-code" class="p-4 text-xs font-mono text-emerald-300 overflow-x-auto custom-scroll leading-relaxed"></pre>
+      </div>
+    ` : ''}
+
+    <!-- AI Staff Engineer Critique -->
+    <div class="bg-indigo-950/20 border border-indigo-500/30 rounded-xl p-4 space-y-2.5">
+      <span class="text-xs font-bold text-indigo-300 flex items-center gap-1.5">
+        <i class="fa-solid fa-user-tie"></i> AI Staff Engineer Design Review
+      </span>
+      <p class="text-[11px] text-slate-400">Describe how YOU would scale this or handle a bottleneck (e.g., hot keys, payment webhook retries, 10x spike):</p>
+      <textarea id="sd-review-input" rows="3" placeholder="Propose your design decision or bottleneck fix..." class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-indigo-500"></textarea>
+      <div class="flex justify-end">
+        <button onclick="submitSysDesignReview()" id="btn-sd-review" class="px-4 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition">
+          Get Staff Critique
+        </button>
+      </div>
+      <pre id="sd-review-output" class="hidden bg-slate-950 p-3.5 rounded-xl border border-slate-800 text-xs font-mono text-slate-200 whitespace-pre-wrap leading-relaxed"></pre>
+    </div>
+  `;
+
+  if (hasCode) switchSdCodeLang(activeSdCodeLang);
+}
+
+function switchSdCodeLang(lang) {
+  activeSdCodeLang = lang;
+  if (!activeCaseStudy) return;
+  const codeEl = document.getElementById('sd-case-code');
+  const pyBtn = document.getElementById('sd-lang-py');
+  const cppBtn = document.getElementById('sd-lang-cpp');
+  if (!codeEl) return;
+  if (lang === 'python') {
+    codeEl.innerText = activeCaseStudy.python_code || '';
+    if (pyBtn) pyBtn.className = 'px-3 py-1 rounded-lg bg-cyan-600 text-white text-xs font-semibold';
+    if (cppBtn) cppBtn.className = 'px-3 py-1 rounded-lg text-slate-400 hover:text-white text-xs font-semibold';
+  } else {
+    codeEl.innerText = activeCaseStudy.cpp_code || '';
+    if (cppBtn) cppBtn.className = 'px-3 py-1 rounded-lg bg-cyan-600 text-white text-xs font-semibold';
+    if (pyBtn) pyBtn.className = 'px-3 py-1 rounded-lg text-slate-400 hover:text-white text-xs font-semibold';
+  }
+}
+
+async function markSysDesignStudied(caseId) {
+  const newStatus = sdProgress[caseId] === 'solved' ? 'todo' : 'solved';
+  try {
+    const res = await fetch('/api/learning/progress', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ category: 'sysdesign', item_id: caseId, status: newStatus })
+    });
+    if (res.ok) {
+      sdProgress[caseId] = newStatus;
+      selectCaseStudy(caseId);
+      loadMomentum();
+      showToast(newStatus === 'solved' ? 'Marked Case Study as Studied!' : 'Marked as Todo');
+    }
+  } catch (e) {}
+}
+
+async function submitSysDesignReview() {
+  if (!activeCaseStudy) return;
+  const proposal = document.getElementById('sd-review-input').value.trim();
+  if (!proposal) { showToast('Enter your design proposal first.'); return; }
+  const btn = document.getElementById('btn-sd-review');
+  const out = document.getElementById('sd-review-output');
+  btn.disabled = true; btn.innerText = 'Reviewing...';
+  out.classList.remove('hidden'); out.innerText = 'Staff Engineer evaluating trade-offs...';
+
+  try {
+    const res = await fetch('/api/sysdesign/ai-review', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ case_id: activeCaseStudy.id, case_title: activeCaseStudy.title, user_design: proposal })
+    });
+    if (res.ok) {
+      const data = await res.json();
+      out.innerText = `[Engine: ${data.provider.toUpperCase()}]\n\n${data.review}`;
+      loadMomentum();
+    }
+  } catch (e) {
+    out.innerText = 'Failed to fetch AI review.';
+  } finally {
+    btn.disabled = false; btn.innerText = 'Get Staff Critique';
+  }
+}
+
+// ==========================================
+// CORE CS RAPID-FIRE SHEET
+// ==========================================
+let coreCsTopics = [];
+let activeCoreCsCat = '';
+
+async function loadCoreCsHub() {
+  try {
+    const res = await fetch('/api/corecs');
+    if (!res.ok) return;
+    const data = await res.json();
+    coreCsTopics = data.topics || [];
+    if (coreCsTopics.length > 0) {
+      renderCoreCsCategory(coreCsTopics[0].category);
+    }
+  } catch (e) {
+    console.error('Error loading Core CS:', e);
+  }
+}
+
+function renderCoreCsCategory(catName) {
+  activeCoreCsCat = catName;
+  const pills = document.getElementById('corecs-cat-pills');
+  const container = document.getElementById('corecs-items-container');
+  if (pills) {
+    pills.innerHTML = coreCsTopics.map(t => `
+      <button onclick="renderCoreCsCategory('${t.category}')" class="px-3 py-1.5 rounded-xl text-xs font-semibold border transition ${t.category === catName ? 'bg-rose-600 text-white border-rose-500' : 'bg-slate-900 text-slate-300 border-slate-800 hover:text-white'}">
+        ${t.category}
+      </button>
+    `).join('');
+  }
+  const activeObj = coreCsTopics.find(t => t.category === catName);
+  if (container && activeObj) {
+    container.innerHTML = activeObj.items.map((item, idx) => `
+      <details class="glass-card rounded-2xl p-4 sm:p-5 border border-slate-800 group" ${idx === 0 ? 'open' : ''}>
+        <summary class="text-xs sm:text-sm font-bold text-white cursor-pointer list-none flex items-center justify-between gap-3">
+          <span><span class="text-rose-400 font-mono mr-1.5">Q${idx+1}.</span>${item.q}</span>
+          <i class="fa-solid fa-chevron-down text-slate-500 text-xs group-open:rotate-180 transition shrink-0"></i>
+        </summary>
+        <div class="mt-3 pt-3 border-t border-slate-800/80 space-y-3">
+          <p class="text-xs text-slate-300 leading-relaxed">${item.a}</p>
+          ${item.code ? `<pre class="bg-slate-950 p-3.5 rounded-xl border border-slate-800 text-xs font-mono text-emerald-300 overflow-x-auto custom-scroll">${item.code}</pre>` : ''}
+        </div>
+      </details>
+    `).join('');
+  }
+}
+
+// ==========================================
+// INTERACTIVE AI MOCK INTERVIEW GRILL MODE
+// ==========================================
+const GRILL_SEED_PROMPTS = [
+  "Walk me through how you reduced SQL transaction latency by 35% at NexGen—what did EXPLAIN show before vs after, and how would you protect that endpoint from cache stampede under 10x traffic?",
+  "Design a distributed Token Bucket rate limiter using Node.js and Redis that supports 50,000 req/sec without race conditions.",
+  "Two simultaneous webhook calls arrive for the exact same payout transaction at Razorpay/ViralMe. How do you guarantee strictly one debit in SQL + Redis?",
+  "Given an array of integers and K, explain how you pick between Sliding Window vs Prefix-Sum HashMap when negative numbers are allowed."
+];
+
+function resetGrillQuestion() {
+  const idx = Math.floor(Math.random() * GRILL_SEED_PROMPTS.length);
+  document.getElementById('grill-question').innerText = GRILL_SEED_PROMPTS[idx];
+  document.getElementById('grill-answer').value = '';
+  document.getElementById('grill-feedback-box').classList.add('hidden');
+}
+
+async function submitGrillAnswer() {
+  const company = document.getElementById('prep-target-company')?.value || 'ViralMe';
+  const role = document.getElementById('prep-target-role')?.value || 'Backend Software Engineer';
+  const focus = document.getElementById('grill-focus')?.value || 'backend';
+  const question = document.getElementById('grill-question').innerText;
+  const user_answer = document.getElementById('grill-answer').value.trim();
+
+  if (!user_answer) {
+    showToast('Type your answer first!');
+    return;
+  }
+
+  const btn = document.getElementById('btn-grill-submit');
+  btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner animate-spin"></i> Evaluating...';
+
+  try {
+    const res = await fetch('/api/ai/mock-grill', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ company, role, question, user_answer, focus_area: focus })
+    });
+    if (res.ok) {
+      const data = await res.json();
+      document.getElementById('grill-score-badge').innerText = `Score: ${data.score}/10`;
+      document.getElementById('grill-provider-tag').innerText = `Evaluated by ${(data.provider || 'AI').toUpperCase()}`;
+      document.getElementById('grill-feedback-text').innerText = data.feedback;
+      document.getElementById('grill-ideal-bullet').innerText = data.ideal_bullet;
+      document.getElementById('grill-feedback-box').classList.remove('hidden');
+
+      if (data.next_question) {
+        document.getElementById('grill-question').innerText = data.next_question;
+        document.getElementById('grill-answer').value = '';
+      }
+      showToast(`Graded ${data.score}/10 — Next follow-up loaded!`);
+    }
+  } catch (e) {
+    showToast('Error grading answer.');
+  } finally {
+    btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Evaluate & Grill Next';
   }
 }

@@ -1,28 +1,58 @@
 import os
 import json
-from datetime import datetime
+from datetime import datetime, date
 from typing import List, Optional
 from fastapi import FastAPI, Depends, HTTPException, status, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, PlainTextResponse
+from sqlalchemy import inspect, text
 from sqlalchemy.orm import Session
 
 from .database import engine, Base, get_db
-from .models import User, CandidateProfile, JobPosting, Application, GeneratedDocument
+from .models import User, CandidateProfile, JobPosting, Application, GeneratedDocument, LearningProgress, DailyMomentum
 from .auth import hash_password, verify_password, create_access_token, get_current_user
 from .schemas import (
     UserRegister, UserLogin, UserOut, UserKeysUpdate,
     ProfileUpdate, ProfileOut,
     TailorRequest, TailorResponse,
     ApplicationCreate, ApplicationUpdate, ApplicationOut,
-    DocumentOut, StatsResponse
+    DocumentOut, StatsResponse,
+    LearningProgressUpdate, DSATutorRequest, SystemDesignReviewRequest,
+    ScreeningAnswerRequest, MockGrillRequest, MomentumIncrementRequest
 )
 from .services.ai_service import AIService
 from .services.job_service import JobService
+from .data.dsa_200 import DSA_200, DSA_PATTERNS
+from .data.system_design import BUILDING_BLOCKS, CASE_STUDIES
+from .data.core_cs import CORE_CS_TOPICS
 
-# Initialize SQLite tables
+# Initialize DB tables & perform safe additive column migrations
 Base.metadata.create_all(bind=engine)
+try:
+    cols = [c["name"] for c in inspect(engine).get_columns("applications")]
+    if "jd_text" not in cols:
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE applications ADD COLUMN jd_text TEXT"))
+except Exception as _mig_err:
+    print(f"[DB Migration Notice] {_mig_err}")
+
+
+def _bump_momentum(db: Session, user_id: int, metric: str, delta: int = 1):
+    today = date.today().isoformat()
+    row = db.query(DailyMomentum).filter(DailyMomentum.user_id == user_id, DailyMomentum.date_str == today).first()
+    if not row:
+        row = DailyMomentum(user_id=user_id, date_str=today, apps_count=0, dsa_count=0, design_count=0)
+        db.add(row)
+        db.flush()
+    if metric == "apps":
+        row.apps_count = max(0, (row.apps_count or 0) + delta)
+    elif metric == "dsa":
+        row.dsa_count = max(0, (row.dsa_count or 0) + delta)
+    elif metric == "design":
+        row.design_count = max(0, (row.design_count or 0) + delta)
+    db.commit()
+    return row
 
 app = FastAPI(
     title="CareerOS - Multi-User AI Job Search & Application Platform",
@@ -222,13 +252,14 @@ def login(login_data: UserLogin, db: Session = Depends(get_db)):
 
 @app.get("/api/auth/me", response_model=UserOut)
 def get_me(current_user: User = Depends(get_current_user)):
+    g_key, q_key = AIService.resolve_keys(current_user.gemini_api_key, current_user.groq_api_key)
     return UserOut(
         id=current_user.id,
         email=current_user.email,
         full_name=current_user.full_name,
         preferred_ai=current_user.preferred_ai,
-        has_gemini_key=bool(current_user.gemini_api_key),
-        has_groq_key=bool(current_user.groq_api_key),
+        has_gemini_key=bool(g_key),
+        has_groq_key=bool(q_key),
         created_at=current_user.created_at
     )
 
@@ -291,21 +322,19 @@ def tailor_application(req: TailorRequest, current_user: User = Depends(get_curr
 
     company = req.company_name or "Target Company"
     role = req.role_title or "Backend Software Engineer"
-    provider = req.provider or current_user.preferred_ai or "gemini"
+    provider = req.provider or current_user.preferred_ai or "groq"
 
-    # API key selection
-    api_key = current_user.gemini_api_key if provider == "gemini" else current_user.groq_api_key
-    if not api_key:
-        api_key = os.getenv("GEMINI_API_KEY") if provider == "gemini" else os.getenv("GROQ_API_KEY")
+    g_key, q_key = AIService.resolve_keys(current_user.gemini_api_key, current_user.groq_api_key)
 
-    # Generate complete application package
+    # Generate complete application package with multi-provider failover
     result = AIService.generate_tailored_package(
         candidate_data=candidate_data,
         job_description=req.job_description,
         company_name=company,
         role_title=role,
-        api_key=api_key,
-        provider=provider
+        provider=provider,
+        gemini_api_key=g_key,
+        groq_api_key=q_key
     )
 
     # Save to Application Tracker automatically
@@ -316,11 +345,13 @@ def tailor_application(req: TailorRequest, current_user: User = Depends(get_curr
         status="drafted",
         fit_score=result["fit_score"],
         job_url=req.job_url,
+        jd_text=req.job_description,
         notes=f"AI Fit: {result['fit_summary']}"
     )
     db.add(app_entry)
     db.commit()
     db.refresh(app_entry)
+    _bump_momentum(db, current_user.id, "apps", 1)
 
     # Save generated documents
     doc_cv = GeneratedDocument(
@@ -481,11 +512,14 @@ def create_application(app_data: ApplicationCreate, current_user: User = Depends
         contact_name=app_data.contact_name,
         contact_channel=app_data.contact_channel,
         job_url=app_data.job_url,
+        jd_text=app_data.jd_text,
         notes=app_data.notes
     )
     db.add(new_app)
     db.commit()
     db.refresh(new_app)
+    if new_app.status == "applied":
+        _bump_momentum(db, current_user.id, "apps", 1)
     return new_app
 
 @app.put("/api/applications/{app_id}", response_model=ApplicationOut)
@@ -494,12 +528,15 @@ def update_application(app_id: int, update_data: ApplicationUpdate, current_user
     if not app_entry:
         raise HTTPException(status_code=404, detail="Application not found")
     
+    prev_status = app_entry.status
     for field, val in update_data.dict(exclude_unset=True).items():
         setattr(app_entry, field, val)
     
     app_entry.updated_at = datetime.utcnow()
     db.commit()
     db.refresh(app_entry)
+    if prev_status != "applied" and app_entry.status == "applied":
+        _bump_momentum(db, current_user.id, "apps", 1)
     return app_entry
 
 @app.delete("/api/applications/{app_id}")
@@ -547,6 +584,188 @@ def get_stats(current_user: User = Depends(get_current_user), db: Session = Depe
         avg_fit_score=avg_score,
         total_documents=total_docs
     )
+
+# ==========================================
+# TOP 200 DSA HUB & LEARNING PROGRESS
+# ==========================================
+@app.get("/api/dsa")
+def get_dsa_sheet(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    rows = db.query(LearningProgress).filter(
+        LearningProgress.user_id == current_user.id,
+        LearningProgress.category == "dsa"
+    ).all()
+    prog_map = {r.item_id: {"status": r.status, "notes": r.notes or ""} for r in rows}
+
+    problems = []
+    solved_cnt = 0
+    revisit_cnt = 0
+    for item in DSA_200:
+        st_info = prog_map.get(item["id"], {"status": "todo", "notes": ""})
+        if st_info["status"] == "solved":
+            solved_cnt += 1
+        elif st_info["status"] == "revisit":
+            revisit_cnt += 1
+        enriched = dict(item)
+        enriched["status"] = st_info["status"]
+        enriched["notes"] = st_info["notes"]
+        problems.append(enriched)
+
+    return {
+        "patterns": DSA_PATTERNS,
+        "problems": problems,
+        "stats": {"total": len(DSA_200), "solved": solved_cnt, "revisit": revisit_cnt}
+    }
+
+@app.post("/api/learning/progress")
+def update_learning_progress(
+    payload: LearningProgressUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    row = db.query(LearningProgress).filter(
+        LearningProgress.user_id == current_user.id,
+        LearningProgress.category == payload.category,
+        LearningProgress.item_id == payload.item_id
+    ).first()
+
+    prev_status = row.status if row else "todo"
+    if not row:
+        row = LearningProgress(
+            user_id=current_user.id,
+            category=payload.category,
+            item_id=payload.item_id,
+            status=payload.status or "todo",
+            notes=payload.notes
+        )
+        db.add(row)
+    else:
+        if payload.status is not None:
+            row.status = payload.status
+        if payload.notes is not None:
+            row.notes = payload.notes
+        row.updated_at = datetime.utcnow()
+
+    db.commit()
+
+    if prev_status != "solved" and payload.status == "solved":
+        if payload.category == "dsa":
+            _bump_momentum(db, current_user.id, "dsa", 1)
+        elif payload.category in ("sysdesign", "corecs"):
+            _bump_momentum(db, current_user.id, "design", 1)
+
+    return {"status": "ok", "item_id": payload.item_id, "new_status": row.status}
+
+@app.post("/api/dsa/ai-tutor")
+def run_dsa_ai_tutor(req: DSATutorRequest, current_user: User = Depends(get_current_user)):
+    g_key, q_key = AIService.resolve_keys(current_user.gemini_api_key, current_user.groq_api_key)
+    preferred = current_user.preferred_ai if current_user.preferred_ai in ("groq", "gemini") else "groq"
+    return AIService.ai_dsa_tutor(
+        title=req.title,
+        pattern=req.pattern,
+        language=req.language,
+        mode=req.mode,
+        user_input=req.user_input or "",
+        preferred=preferred,
+        gemini_key=g_key,
+        groq_key=q_key
+    )
+
+# ==========================================
+# SYSTEM DESIGN ACADEMY & CORE CS
+# ==========================================
+@app.get("/api/sysdesign")
+def get_system_design_hub(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    rows = db.query(LearningProgress).filter(
+        LearningProgress.user_id == current_user.id,
+        LearningProgress.category == "sysdesign"
+    ).all()
+    prog_map = {r.item_id: r.status for r in rows}
+    return {
+        "building_blocks": BUILDING_BLOCKS,
+        "case_studies": CASE_STUDIES,
+        "progress": prog_map
+    }
+
+@app.post("/api/sysdesign/ai-review")
+def run_sysdesign_ai_review(req: SystemDesignReviewRequest, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    g_key, q_key = AIService.resolve_keys(current_user.gemini_api_key, current_user.groq_api_key)
+    preferred = current_user.preferred_ai if current_user.preferred_ai in ("groq", "gemini") else "groq"
+    _bump_momentum(db, current_user.id, "design", 1)
+    return AIService.ai_system_design_review(
+        case_title=req.case_title,
+        user_design=req.user_design,
+        preferred=preferred,
+        gemini_key=g_key,
+        groq_key=q_key
+    )
+
+@app.get("/api/corecs")
+def get_core_cs_topics():
+    return {"topics": CORE_CS_TOPICS}
+
+# ==========================================
+# EASY APPLY SCREENING HELPER & MOCK GRILL
+# ==========================================
+@app.post("/api/ai/screening-answer")
+def generate_screening_answer(req: ScreeningAnswerRequest, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    profile = db.query(CandidateProfile).filter(CandidateProfile.user_id == current_user.id).first()
+    candidate_data = {
+        "name": current_user.full_name,
+        "headline": profile.headline if profile else "Backend / Full Stack Engineer"
+    }
+    g_key, q_key = AIService.resolve_keys(current_user.gemini_api_key, current_user.groq_api_key)
+    preferred = current_user.preferred_ai if current_user.preferred_ai in ("groq", "gemini") else "groq"
+    return AIService.ai_screening_answer(
+        company=req.company,
+        role=req.role,
+        question=req.question,
+        jd_text=req.jd_text or "",
+        candidate_data=candidate_data,
+        preferred=preferred,
+        gemini_key=g_key,
+        groq_key=q_key
+    )
+
+@app.post("/api/ai/mock-grill")
+def run_mock_grill(req: MockGrillRequest, current_user: User = Depends(get_current_user)):
+    g_key, q_key = AIService.resolve_keys(current_user.gemini_api_key, current_user.groq_api_key)
+    preferred = current_user.preferred_ai if current_user.preferred_ai in ("groq", "gemini") else "groq"
+    return AIService.ai_mock_grill(
+        company=req.company,
+        role=req.role,
+        question=req.question,
+        user_answer=req.user_answer,
+        focus_area=req.focus_area,
+        preferred=preferred,
+        gemini_key=g_key,
+        groq_key=q_key
+    )
+
+# ==========================================
+# DAILY MOMENTUM TRACKER
+# ==========================================
+@app.get("/api/momentum")
+def get_today_momentum(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    today = date.today().isoformat()
+    row = db.query(DailyMomentum).filter(DailyMomentum.user_id == current_user.id, DailyMomentum.date_str == today).first()
+    if not row:
+        return {"date": today, "apps_count": 0, "dsa_count": 0, "design_count": 0}
+    return {
+        "date": today,
+        "apps_count": row.apps_count or 0,
+        "dsa_count": row.dsa_count or 0,
+        "design_count": row.design_count or 0
+    }
+
+@app.post("/api/momentum")
+def increment_momentum(req: MomentumIncrementRequest, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    row = _bump_momentum(db, current_user.id, req.metric, req.delta)
+    return {
+        "date": row.date_str,
+        "apps_count": row.apps_count or 0,
+        "dsa_count": row.dsa_count or 0,
+        "design_count": row.design_count or 0
+    }
 
 # ==========================================
 # SPA ROOT SERVING

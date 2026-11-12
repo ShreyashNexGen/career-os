@@ -100,6 +100,7 @@ class ApplicationCreate(BaseModel):
     contact_name: Optional[str] = None
     contact_channel: Optional[str] = None
     job_url: Optional[str] = None
+    jd_text: Optional[str] = None
     notes: Optional[str] = None
 
 class ApplicationUpdate(BaseModel):
@@ -107,6 +108,8 @@ class ApplicationUpdate(BaseModel):
     fit_score: Optional[int] = None
     contact_name: Optional[str] = None
     contact_channel: Optional[str] = None
+    job_url: Optional[str] = None
+    jd_text: Optional[str] = None
     notes: Optional[str] = None
 
 class ApplicationOut(BaseModel):
@@ -118,12 +121,50 @@ class ApplicationOut(BaseModel):
     contact_name: Optional[str]
     contact_channel: Optional[str]
     job_url: Optional[str]
+    jd_text: Optional[str] = None
     notes: Optional[str]
     created_at: datetime
     updated_at: datetime
 
     class Config:
         from_attributes = True
+
+# --- Learning & AI Interactive Schemas ---
+class LearningProgressUpdate(BaseModel):
+    category: str # dsa, sysdesign, corecs
+    item_id: str
+    status: Optional[str] = "todo"
+    notes: Optional[str] = None
+
+class DSATutorRequest(BaseModel):
+    problem_id: str
+    title: str
+    pattern: str
+    language: str = "python" # python, cpp
+    mode: str = "dry_run" # dry_run, hint, quiz, debug
+    user_input: Optional[str] = ""
+
+class SystemDesignReviewRequest(BaseModel):
+    case_id: str
+    case_title: str
+    user_design: str
+
+class ScreeningAnswerRequest(BaseModel):
+    company: str
+    role: str
+    question: str
+    jd_text: Optional[str] = ""
+
+class MockGrillRequest(BaseModel):
+    company: str = "ViralMe"
+    role: str = "Backend Software Engineer"
+    question: str
+    user_answer: str
+    focus_area: str = "backend" # backend, dsa, sysdesign, corecs
+
+class MomentumIncrementRequest(BaseModel):
+    metric: str # apps, dsa, design
+    delta: int = 1
 
 # --- Document Vault Schemas ---
 class DocumentOut(BaseModel):

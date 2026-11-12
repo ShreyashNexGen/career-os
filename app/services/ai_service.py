@@ -7,29 +7,39 @@ from typing import Dict, Any, List, Optional
 class AIService:
 
     @staticmethod
+    def resolve_keys(gemini_key: Optional[str] = None, groq_key: Optional[str] = None):
+        """Resolve per-user keys with safe environment variable fallbacks."""
+        g_key = (gemini_key or os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_GENERATIVE_AI_API_KEY") or "").strip()
+        q_key = (groq_key or os.getenv("GROQ_API_KEY") or "").strip()
+        return g_key or None, q_key or None
+
+    @staticmethod
     def call_gemini(prompt: str, api_key: str) -> str:
-        """Call Google Gemini 1.5/2.0 Flash API directly via standard REST."""
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
-        payload = {
-            "contents": [{
-                "parts": [{"text": prompt}]
-            }],
-            "generationConfig": {
-                "temperature": 0.3,
-                "maxOutputTokens": 6000
+        """Call Google Gemini API via standard REST, trying stable Flash models."""
+        models_to_try = ["gemini-2.5-flash", "gemini-3.5-flash-lite"]
+        last_err = None
+        for model_id in models_to_try:
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_id}:generateContent?key={api_key}"
+            payload = {
+                "contents": [{
+                    "parts": [{"text": prompt}]
+                }],
+                "generationConfig": {
+                    "temperature": 0.3,
+                    "maxOutputTokens": 6000
+                }
             }
-        }
-        headers = {"Content-Type": "application/json"}
-        resp = requests.post(url, headers=headers, json=payload, timeout=45)
-        if resp.status_code != 200:
-            raise Exception(f"Gemini API error ({resp.status_code}): {resp.text}")
-        data = resp.json()
-        candidates = data.get("candidates", [])
-        if candidates and "content" in candidates[0]:
-            parts = candidates[0]["content"].get("parts", [])
-            if parts:
-                return parts[0].get("text", "")
-        return ""
+            headers = {"Content-Type": "application/json"}
+            resp = requests.post(url, headers=headers, json=payload, timeout=45)
+            if resp.status_code == 200:
+                data = resp.json()
+                candidates = data.get("candidates", [])
+                if candidates and "content" in candidates[0]:
+                    parts = candidates[0]["content"].get("parts", [])
+                    if parts:
+                        return parts[0].get("text", "")
+            last_err = f"Gemini API error ({resp.status_code}): {resp.text[:300]}"
+        raise Exception(last_err or "Gemini API failed")
 
     @staticmethod
     def call_groq(prompt: str, api_key: str) -> str:
@@ -50,12 +60,40 @@ class AIService:
         }
         resp = requests.post(url, headers=headers, json=payload, timeout=35)
         if resp.status_code != 200:
-            raise Exception(f"Groq API error ({resp.status_code}): {resp.text}")
+            raise Exception(f"Groq API error ({resp.status_code}): {resp.text[:300]}")
         data = resp.json()
         choices = data.get("choices", [])
         if choices:
             return choices[0]["message"]["content"]
         return ""
+
+    @classmethod
+    def execute_llm_prompt(
+        cls,
+        prompt: str,
+        preferred: str = "groq",
+        gemini_key: Optional[str] = None,
+        groq_key: Optional[str] = None
+    ) -> tuple[Optional[str], str]:
+        """Try preferred AI provider, automatically failing over to backup provider if configured."""
+        if preferred == "offline":
+            return None, "offline"
+
+        g_key, q_key = cls.resolve_keys(gemini_key, groq_key)
+        order = [("groq", q_key), ("gemini", g_key)] if preferred == "groq" else [("gemini", g_key), ("groq", q_key)]
+
+        for prov, key in order:
+            if not key:
+                continue
+            try:
+                text = cls.call_groq(prompt, key) if prov == "groq" else cls.call_gemini(prompt, key)
+                if text and text.strip():
+                    return text.strip(), prov
+            except Exception as e:
+                print(f"[AIService Warning] {prov} failed ({str(e)[:180]}). Trying fallback...")
+                continue
+
+        return None, "offline"
 
     @classmethod
     def generate_tailored_package(
@@ -65,22 +103,35 @@ class AIService:
         company_name: str,
         role_title: str,
         api_key: str = None,
-        provider: str = "gemini"
+        provider: str = "gemini",
+        gemini_api_key: Optional[str] = None,
+        groq_api_key: Optional[str] = None
     ) -> Dict[str, Any]:
         """
-        Orchestrates AI analysis and document generation.
-        Falls back to our master algorithmic engine if no API key or on provider failure.
+        Orchestrates AI analysis and document generation with multi-provider failover.
+        Falls back to our master algorithmic engine if no API key succeeds.
         """
-        if api_key and provider in ["gemini", "groq"]:
+        if provider != "offline":
+            g_key = gemini_api_key or (api_key if provider == "gemini" else None)
+            q_key = groq_api_key or (api_key if provider == "groq" else None)
             try:
-                return cls._llm_tailor(candidate_data, job_description, company_name, role_title, api_key, provider)
+                return cls._llm_tailor(candidate_data, job_description, company_name, role_title, provider, g_key, q_key)
             except Exception as e:
-                print(f"[AIService Warning] LLM call failed ({str(e)}). Falling back to rule-based engine.")
+                print(f"[AIService Warning] LLM tailor fallback triggered ({str(e)[:180]}).")
 
         return cls._rule_based_tailor(candidate_data, job_description, company_name, role_title)
 
     @classmethod
-    def _llm_tailor(cls, candidate: Dict[str, Any], jd: str, company: str, role: str, api_key: str, provider: str) -> Dict[str, Any]:
+    def _llm_tailor(
+        cls,
+        candidate: Dict[str, Any],
+        jd: str,
+        company: str,
+        role: str,
+        provider: str,
+        gemini_key: Optional[str] = None,
+        groq_key: Optional[str] = None
+    ) -> Dict[str, Any]:
         prompt = f"""
 You are an elite Silicon Valley / Indian Tech technical recruiter and Principal Systems Architect.
 Candidate Profile:
@@ -113,7 +164,9 @@ Return a STRICT valid JSON object with the following exact keys:
 }}
 Return ONLY raw JSON, without markdown formatting or code fences.
 """
-        raw_output = cls.call_gemini(prompt, api_key) if provider == "gemini" else cls.call_groq(prompt, api_key)
+        raw_output, _used = cls.execute_llm_prompt(prompt, preferred=provider, gemini_key=gemini_key, groq_key=groq_key)
+        if not raw_output:
+            raise Exception("All configured LLM providers failed or returned empty.")
         raw_output = re.sub(r"^```json\s*", "", raw_output.strip())
         raw_output = re.sub(r"^```\s*", "", raw_output)
         raw_output = re.sub(r"\s*```$", "", raw_output)
@@ -706,4 +759,168 @@ ACHIEVEMENTS:
             "total_ctc_range": total,
             "insights": insights,
             "negotiation_script": script
+        }
+
+    @classmethod
+    def ai_dsa_tutor(
+        cls,
+        title: str,
+        pattern: str,
+        language: str = "python",
+        mode: str = "dry_run",
+        user_input: str = "",
+        preferred: str = "groq",
+        gemini_key: Optional[str] = None,
+        groq_key: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """Interactive AI DSA tutor for dry runs, edge cases, debugging, and follow-up twists."""
+        lang_label = "C++17" if language == "cpp" else "Python 3"
+        mode_instructions = {
+            "dry_run": f"Walk through a crisp step-by-step dry run trace on a concrete example (or the user's input: '{user_input}') showing exact variable states at each iteration.",
+            "hint": "Give 3 progressive hints without spoiling the full code immediately, ending with the core invariant.",
+            "quiz": "Act as a senior interviewer at Razorpay/Amazon. Ask ONE tough follow-up constraint twist (e.g. streaming input, O(1) space, or concurrency) and briefly explain what you look for.",
+            "debug": f"Inspect this user code/idea in {lang_label} and spot any off-by-one, edge-case, or complexity bugs:\n{user_input}"
+        }
+        task = mode_instructions.get(mode, mode_instructions["dry_run"])
+        prompt = f"""You are a Senior FAANG/Startup DSA Coach helping a 2+ YoE Backend Engineer prepare in {lang_label}.
+Problem: {title}
+Pattern: {pattern}
+Task: {task}
+Keep it concise, crisp, visual (use clear step lines/arrows), and highlight time/space complexity + edge cases."""
+
+        text, used = cls.execute_llm_prompt(prompt, preferred=preferred, gemini_key=gemini_key, groq_key=groq_key)
+        if text:
+            return {"response": text, "provider": used}
+
+        # Deterministic offline tutor fallback
+        return {
+            "provider": "offline",
+            "response": (
+                f"[{pattern} Coaching for {title} ({lang_label})]\n\n"
+                f"1. Core Recognition: Look for the '{pattern}' invariant before writing loops.\n"
+                f"2. Edge Cases to Verify First: Empty input, single element, duplicate keys, negative/zero values, integer overflow (use long long in C++ if summing).\n"
+                f"3. Dry Run Tip: Trace pointer movement / state transitions step-by-step on a 4-element test array.\n"
+                f"4. Connect your Groq key in Settings for custom input tracing & live bug detection!"
+            )
+        }
+
+    @classmethod
+    def ai_system_design_review(
+        cls,
+        case_title: str,
+        user_design: str,
+        preferred: str = "groq",
+        gemini_key: Optional[str] = None,
+        groq_key: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """Evaluates user's system design trade-offs like a Staff Backend Architect."""
+        prompt = f"""You are a Principal/Staff Software Architect reviewing a candidate's System Design answer.
+Case Study: {case_title}
+Candidate's Proposal:
+{user_design}
+
+Provide a crisp structured review covering:
+1. Score (/10) & What You Nailed
+2. Bottlenecks / Failure Modes Missed (hot keys, split-brain, idempotency, backpressure, DB locks)
+3. Exact Production Improvement (1 concrete upgrade using Redis/Kafka/DB indexing/partitioning)
+Keep under 220 words."""
+
+        text, used = cls.execute_llm_prompt(prompt, preferred=preferred, gemini_key=gemini_key, groq_key=groq_key)
+        if text:
+            return {"review": text, "provider": used}
+
+        return {
+            "provider": "offline",
+            "review": (
+                f"Architecture Review Checklist for {case_title}:\n"
+                "• Bottleneck Check: Verify single points of failure on your write database—add connection pooling & read replicas.\n"
+                "• Concurrency Check: Protect critical state transitions with Redis distributed locks (SETNX + TTL) or DB optimistic versioning.\n"
+                "• Reliability Check: Decouple burst writes using an async queue (BullMQ/Kafka) with idempotency keys & Dead Letter Queues.\n"
+                "• Configure your Groq/Gemini key in Settings for personalized AI critique on your exact answer."
+            )
+        }
+
+    @classmethod
+    def ai_screening_answer(
+        cls,
+        company: str,
+        role: str,
+        question: str,
+        jd_text: str,
+        candidate_data: Dict[str, Any],
+        preferred: str = "groq",
+        gemini_key: Optional[str] = None,
+        groq_key: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """Generates sharp, metric-backed answers for LinkedIn Easy Apply / Google Form screening questions."""
+        prompt = f"""Write a concise, high-impact application screening answer (2-4 sentences, ready to paste into LinkedIn Easy Apply or an ATS form).
+Candidate: {candidate_data.get('name', 'Shreyash Shukla')} — Backend/Full-Stack Engineer (2+ YoE, Node.js, Express, Python, SQL, Redis, Docker, AWS).
+Real Verified Metrics: Built 250+ RESTful APIs at NexGen, reduced SQL transaction latency by 35% via composite B-Tree indexing, cut manual reconciliation 70% via Python automation, sustained 99.9% uptime SLA, GFG Institute Rank #28 (800+ DSA solved).
+Target: {role} at {company}
+JD Context: {(jd_text or '')[:800]}
+Screening Question: {question}
+
+Rules: Be natural, direct, zero buzzword fluff, zero em-dashes, anchor to real metrics."""
+
+        text, used = cls.execute_llm_prompt(prompt, preferred=preferred, gemini_key=gemini_key, groq_key=groq_key)
+        if text:
+            return {"answer": text, "provider": used}
+
+        return {
+            "provider": "offline",
+            "answer": (
+                f"With 2+ years of production backend experience architecting 250+ RESTful APIs in Node.js and Python, "
+                f"I have delivered measurable scale improvements including a 35% reduction in database query latency through SQL index tuning "
+                f"and 99.9% microservice uptime using Redis caching and Docker. I am excited to bring this ownership mindset to {company}'s {role} team."
+            )
+        }
+
+    @classmethod
+    def ai_mock_grill(
+        cls,
+        company: str,
+        role: str,
+        question: str,
+        user_answer: str,
+        focus_area: str = "backend",
+        preferred: str = "groq",
+        gemini_key: Optional[str] = None,
+        groq_key: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """Interactive AI interviewer grill mode: scores candidate answer and asks next follow-up."""
+        prompt = f"""You are a tough yet constructive Senior Engineering Interviewer at {company} interviewing for {role} (Focus: {focus_area}).
+Previous Question Asked: {question}
+Candidate's Answer: {user_answer}
+
+Respond strictly in valid JSON with keys:
+{{
+  "score": <1 to 10 integer>,
+  "feedback": "<2-3 sentences highlighting technical accuracy, depth, and missing edge cases>",
+  "ideal_bullet": "<1 sentence showing how a top 1% SDE-2 frames this>",
+  "next_question": "<1 sharp follow-up question digging deeper or pivoting to scale/edge cases>"
+}}
+Return ONLY raw JSON."""
+
+        text, used = cls.execute_llm_prompt(prompt, preferred=preferred, gemini_key=gemini_key, groq_key=groq_key)
+        if text:
+            try:
+                cleaned = re.sub(r"^```json\s*|^```\s*|\s*```$", "", text.strip(), flags=re.MULTILINE)
+                parsed = json.loads(cleaned)
+                parsed["provider"] = used
+                return parsed
+            except Exception:
+                return {
+                    "score": 8,
+                    "feedback": text[:500],
+                    "ideal_bullet": "Tie architecture choices back to P99 latency, failure recovery, and measurable production SLAs.",
+                    "next_question": f"How would your design handle a 10x burst in concurrent writes at {company} without dropping requests?",
+                    "provider": used
+                }
+
+        return {
+            "score": 8,
+            "feedback": "Solid core reasoning. Strengthen your answer by explicitly stating time/space trade-offs, failure fallback behavior, and concrete numbers (latency, throughput, or DB lock scope).",
+            "ideal_bullet": "Always quantify the bottleneck (e.g., B-Tree composite index dropped P99 from 850ms to <45ms) before explaining the fix.",
+            "next_question": f"What happens in your {focus_area} solution if Redis or the primary cache node restarts under peak load?",
+            "provider": "offline"
         }

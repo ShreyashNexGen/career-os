@@ -104,7 +104,7 @@
       </div>
 
       <!-- Navigation Links -->
-      <nav class="p-3 space-y-1.5 text-xs font-medium overflow-y-auto custom-scroll flex-1">
+      <nav class="p-3 space-y-1 text-xs font-medium overflow-y-auto custom-scroll flex-1">
         <button onclick="switchTab('pipeline')" id="nav-pipeline" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl bg-blue-600 text-white font-semibold transition shadow-sm">
           <i class="fa-solid fa-table-columns w-4 text-center"></i> Pipeline & Kanban
         </button>
@@ -112,11 +112,22 @@
           <i class="fa-solid fa-wand-magic-sparkles w-4 text-center text-amber-400"></i> 1-Click AI Tailor
         </button>
         <button onclick="switchTab('radar')" id="nav-radar" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800/60 transition">
-          <i class="fa-solid fa-satellite-dish w-4 text-center text-emerald-400"></i> Job Radar (100+ Jobs)
+          <i class="fa-solid fa-satellite-dish w-4 text-center text-emerald-400"></i> Job Radar & Sniper
+        </button>
+        <div class="pt-2 pb-1 px-2 text-[10px] font-mono uppercase tracking-wider text-slate-500">Mastery & Prep</div>
+        <button onclick="switchTab('dsa')" id="nav-dsa" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800/60 transition">
+          <i class="fa-solid fa-code w-4 text-center text-cyan-400"></i> Top 200 DSA (Py/C++)
+        </button>
+        <button onclick="switchTab('sysdesign')" id="nav-sysdesign" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800/60 transition">
+          <i class="fa-solid fa-diagram-project w-4 text-center text-indigo-400"></i> System Design & LLD
+        </button>
+        <button onclick="switchTab('corecs')" id="nav-corecs" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800/60 transition">
+          <i class="fa-solid fa-database w-4 text-center text-rose-400"></i> Core CS Rapid-Fire
         </button>
         <button onclick="switchTab('prep')" id="nav-prep" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800/60 transition">
-          <i class="fa-solid fa-brain w-4 text-center text-purple-400"></i> Interview Prep Suite
+          <i class="fa-solid fa-brain w-4 text-center text-purple-400"></i> Interview Prep & Grill
         </button>
+        <div class="pt-2 pb-1 px-2 text-[10px] font-mono uppercase tracking-wider text-slate-500">Tools & Workspace</div>
         <button onclick="switchTab('salary')" id="nav-salary" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800/60 transition">
           <i class="fa-solid fa-calculator w-4 text-center text-emerald-400"></i> Salary & ESOPs
         </button>
@@ -151,7 +162,7 @@
 
       <div class="mt-2.5 pt-2 border-t border-slate-800/60 flex items-center justify-between text-[10px] font-mono text-slate-400">
         <span>AI Engine:</span>
-        <span class="text-emerald-400 font-semibold px-1.5 py-0.5 rounded bg-emerald-950/60 border border-emerald-500/30" id="sidebar-ai-mode">Gemini (Free)</span>
+        <span class="text-emerald-400 font-semibold px-1.5 py-0.5 rounded bg-emerald-950/60 border border-emerald-500/30" id="sidebar-ai-mode">Groq / Gemini</span>
       </div>
     </div>
   </aside>
@@ -171,17 +182,39 @@
         </div>
       </div>
       <div class="flex items-center gap-2 sm:gap-3 shrink-0">
+        <button onclick="openQuickImportModal()" class="px-2.5 sm:px-3 py-1.5 text-xs font-semibold rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 transition flex items-center gap-1.5" title="Paste any LinkedIn JD text or link">
+          <i class="fa-solid fa-paste"></i> <span class="hidden sm:inline">Import JD</span>
+        </button>
         <button onclick="switchTab('tailor')" class="px-3 sm:px-3.5 py-1.5 text-xs font-semibold rounded-xl bg-blue-600 hover:bg-blue-500 text-white transition flex items-center gap-1.5 shadow-md shadow-blue-600/25">
           <i class="fa-solid fa-wand-magic-sparkles text-amber-300"></i> <span class="hidden xs:inline">Tailor</span> Role
         </button>
-        <a href="/docs" target="_blank" class="px-2.5 sm:px-3 py-1.5 text-xs font-mono font-medium rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition flex items-center gap-1.5">
-          <i class="fa-solid fa-code text-blue-400"></i> <span class="hidden sm:inline">API</span> Docs
+        <a href="/docs" target="_blank" class="hidden sm:flex px-3 py-1.5 text-xs font-mono font-medium rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition items-center gap-1.5">
+          <i class="fa-solid fa-code text-blue-400"></i> API Docs
         </a>
       </div>
     </header>
 
+    <!-- Daily Momentum Streak Strip -->
+    <div class="px-4 sm:px-8 py-2 bg-[#0b1120] border-b border-slate-800/70 flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono shrink-0 no-print">
+      <div class="flex items-center gap-2 text-slate-400">
+        <span class="flex items-center gap-1.5 text-amber-400 font-bold"><i class="fa-solid fa-fire"></i> Today's Mission:</span>
+        <span class="hidden sm:inline text-slate-500">Stay consistent — small daily reps compound into offers.</span>
+      </div>
+      <div class="flex items-center gap-2 sm:gap-3">
+        <button onclick="bumpMomentum('apps')" class="px-2.5 py-0.5 rounded-full bg-blue-950/60 border border-blue-500/30 text-blue-300 hover:border-blue-400 transition flex items-center gap-1.5" title="Click to increment Apps count">
+          <span>Apps:</span> <strong id="mom-apps" class="text-white">0/3</strong> <i class="fa-solid fa-plus text-[9px] opacity-60"></i>
+        </button>
+        <button onclick="bumpMomentum('dsa')" class="px-2.5 py-0.5 rounded-full bg-cyan-950/60 border border-cyan-500/30 text-cyan-300 hover:border-cyan-400 transition flex items-center gap-1.5" title="Click to increment DSA solved today">
+          <span>DSA:</span> <strong id="mom-dsa" class="text-white">0/2</strong> <i class="fa-solid fa-plus text-[9px] opacity-60"></i>
+        </button>
+        <button onclick="bumpMomentum('design')" class="px-2.5 py-0.5 rounded-full bg-purple-950/60 border border-purple-500/30 text-purple-300 hover:border-purple-400 transition flex items-center gap-1.5" title="Click to increment Design/CS reviewed">
+          <span>Design:</span> <strong id="mom-design" class="text-white">0/1</strong> <i class="fa-solid fa-plus text-[9px] opacity-60"></i>
+        </button>
+      </div>
+    </div>
+
     <!-- Scrollable Tab Content Container -->
-    <main class="flex-1 overflow-y-auto overflow-x-hidden p-6 sm:p-8 custom-scroll">
+    <main class="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-8 pb-24 md:pb-8 custom-scroll">
 
       <!-- ========================================== -->
       <!-- TAB 1: PIPELINE & KANBAN                   -->
@@ -212,52 +245,78 @@
           </div>
         </div>
 
-        <!-- Fixed-Height, 5-Column Non-Horizontal Scroll Kanban Board -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3.5 w-full items-start">
+        <!-- 3-Day Follow-Up & Cold DM Queue Banner -->
+        <div id="followup-queue-banner" class="hidden glass-card rounded-2xl p-4 border-l-4 border-l-amber-500 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div class="flex items-start gap-3">
+            <span class="w-8 h-8 rounded-xl bg-amber-500/15 text-amber-400 border border-amber-500/30 flex items-center justify-center shrink-0 mt-0.5">
+              <i class="fa-solid fa-bell"></i>
+            </span>
+            <div>
+              <h4 class="text-xs font-bold text-white flex items-center gap-2">
+                Follow-Up Bump Queue <span id="followup-queue-count" class="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 font-mono text-[10px]">0 Due</span>
+              </h4>
+              <p class="text-[11px] text-slate-400 mt-0.5" id="followup-queue-names">Applied 3+ days ago? Sending a crisp LinkedIn DM doubles callback rates.</p>
+            </div>
+          </div>
+          <div id="followup-queue-actions" class="flex flex-wrap items-center gap-2"></div>
+        </div>
+
+        <!-- Mobile Stage Switcher Pills (< lg screens) -->
+        <div class="flex lg:hidden items-center gap-1.5 overflow-x-auto custom-scroll pb-1">
+          <button onclick="setMobileKanbanStage('all')" id="mstage-all" class="px-3 py-1.5 rounded-full bg-blue-600 text-white text-[11px] font-semibold shrink-0 transition">All Stages</button>
+          <button onclick="setMobileKanbanStage('discovered')" id="mstage-discovered" class="px-3 py-1.5 rounded-full bg-slate-900 text-slate-300 border border-slate-800 text-[11px] font-medium shrink-0 transition">Discovered</button>
+          <button onclick="setMobileKanbanStage('drafted')" id="mstage-drafted" class="px-3 py-1.5 rounded-full bg-slate-900 text-amber-300 border border-slate-800 text-[11px] font-medium shrink-0 transition">Drafted</button>
+          <button onclick="setMobileKanbanStage('applied')" id="mstage-applied" class="px-3 py-1.5 rounded-full bg-slate-900 text-blue-300 border border-slate-800 text-[11px] font-medium shrink-0 transition">Applied</button>
+          <button onclick="setMobileKanbanStage('interview')" id="mstage-interview" class="px-3 py-1.5 rounded-full bg-slate-900 text-purple-300 border border-slate-800 text-[11px] font-medium shrink-0 transition">Interview</button>
+          <button onclick="setMobileKanbanStage('offer')" id="mstage-offer" class="px-3 py-1.5 rounded-full bg-slate-900 text-emerald-300 border border-slate-800 text-[11px] font-medium shrink-0 transition">Offer</button>
+        </div>
+
+        <!-- Compact, Scrollable 5-Column Kanban Board -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5 w-full items-start">
           
           <!-- Column 1: Discovered -->
-          <div class="w-full bg-slate-900/70 rounded-2xl p-3 border border-slate-800/80 flex flex-col shadow-sm">
+          <div id="kanban-wrap-discovered" class="w-full bg-slate-900/70 rounded-2xl p-3 border border-slate-800/80 flex flex-col shadow-sm">
             <div class="flex items-center justify-between pb-2.5 border-b border-slate-800 text-xs font-semibold text-slate-300">
               <span class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-slate-400"></span> Discovered</span>
               <span class="font-mono text-[10px] bg-slate-800 px-2 py-0.5 rounded text-slate-300 font-bold" id="col-count-discovered">0</span>
             </div>
-            <div class="mt-2.5 space-y-2.5 h-[calc(100vh-320px)] min-h-[380px] max-h-[620px] overflow-y-auto custom-scroll pr-1" id="col-discovered"></div>
+            <div class="mt-2.5 space-y-2.5 min-h-[130px] max-h-[460px] overflow-y-auto custom-scroll pr-1" id="col-discovered"></div>
           </div>
 
           <!-- Column 2: Drafted -->
-          <div class="w-full bg-slate-900/70 rounded-2xl p-3 border border-slate-800/80 flex flex-col shadow-sm">
+          <div id="kanban-wrap-drafted" class="w-full bg-slate-900/70 rounded-2xl p-3 border border-slate-800/80 flex flex-col shadow-sm">
             <div class="flex items-center justify-between pb-2.5 border-b border-slate-800 text-xs font-semibold text-amber-400">
               <span class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-amber-400"></span> Tailored / Drafted</span>
               <span class="font-mono text-[10px] bg-amber-950/60 text-amber-300 border border-amber-500/20 px-2 py-0.5 rounded font-bold" id="col-count-drafted">0</span>
             </div>
-            <div class="mt-2.5 space-y-2.5 h-[calc(100vh-320px)] min-h-[380px] max-h-[620px] overflow-y-auto custom-scroll pr-1" id="col-drafted"></div>
+            <div class="mt-2.5 space-y-2.5 min-h-[130px] max-h-[460px] overflow-y-auto custom-scroll pr-1" id="col-drafted"></div>
           </div>
 
           <!-- Column 3: Applied -->
-          <div class="w-full bg-slate-900/70 rounded-2xl p-3 border border-slate-800/80 flex flex-col shadow-sm">
+          <div id="kanban-wrap-applied" class="w-full bg-slate-900/70 rounded-2xl p-3 border border-slate-800/80 flex flex-col shadow-sm">
             <div class="flex items-center justify-between pb-2.5 border-b border-slate-800 text-xs font-semibold text-blue-400">
               <span class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-blue-400"></span> Applied</span>
               <span class="font-mono text-[10px] bg-blue-950/60 text-blue-300 border border-blue-500/20 px-2 py-0.5 rounded font-bold" id="col-count-applied">0</span>
             </div>
-            <div class="mt-2.5 space-y-2.5 h-[calc(100vh-320px)] min-h-[380px] max-h-[620px] overflow-y-auto custom-scroll pr-1" id="col-applied"></div>
+            <div class="mt-2.5 space-y-2.5 min-h-[130px] max-h-[460px] overflow-y-auto custom-scroll pr-1" id="col-applied"></div>
           </div>
 
           <!-- Column 4: Interview -->
-          <div class="w-full bg-slate-900/70 rounded-2xl p-3 border border-slate-800/80 flex flex-col shadow-sm">
+          <div id="kanban-wrap-interview" class="w-full bg-slate-900/70 rounded-2xl p-3 border border-slate-800/80 flex flex-col shadow-sm">
             <div class="flex items-center justify-between pb-2.5 border-b border-slate-800 text-xs font-semibold text-purple-400">
               <span class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-purple-400"></span> Interview</span>
               <span class="font-mono text-[10px] bg-purple-950/60 text-purple-300 border border-purple-500/20 px-2 py-0.5 rounded font-bold" id="col-count-interview">0</span>
             </div>
-            <div class="mt-2.5 space-y-2.5 h-[calc(100vh-320px)] min-h-[380px] max-h-[620px] overflow-y-auto custom-scroll pr-1" id="col-interview"></div>
+            <div class="mt-2.5 space-y-2.5 min-h-[130px] max-h-[460px] overflow-y-auto custom-scroll pr-1" id="col-interview"></div>
           </div>
 
           <!-- Column 5: Offer / Hired -->
-          <div class="w-full bg-slate-900/70 rounded-2xl p-3 border border-slate-800/80 flex flex-col shadow-sm">
+          <div id="kanban-wrap-offer" class="w-full bg-slate-900/70 rounded-2xl p-3 border border-slate-800/80 flex flex-col shadow-sm">
             <div class="flex items-center justify-between pb-2.5 border-b border-slate-800 text-xs font-semibold text-emerald-400">
               <span class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-emerald-400"></span> Offer</span>
               <span class="font-mono text-[10px] bg-emerald-950/60 text-emerald-300 border border-emerald-500/20 px-2 py-0.5 rounded font-bold" id="col-count-offer">0</span>
             </div>
-            <div class="mt-2.5 space-y-2.5 h-[calc(100vh-320px)] min-h-[380px] max-h-[620px] overflow-y-auto custom-scroll pr-1" id="col-offer"></div>
+            <div class="mt-2.5 space-y-2.5 min-h-[130px] max-h-[460px] overflow-y-auto custom-scroll pr-1" id="col-offer"></div>
           </div>
 
         </div>
@@ -269,7 +328,7 @@
       <div id="tab-tailor" class="space-y-6 hidden">
         <div class="max-w-5xl mx-auto space-y-6">
           
-          <div class="glass-card rounded-2xl p-6 sm:p-7">
+          <div class="glass-card rounded-2xl p-6 sm:p-7 no-print">
             <div class="flex items-center justify-between mb-2">
               <h3 class="text-base font-bold text-white flex items-center gap-2">
                 <i class="fa-solid fa-wand-magic-sparkles text-amber-400"></i> AI Document Tailoring & Strategy Engine
@@ -303,8 +362,8 @@
                 <div class="flex items-center gap-2 text-xs w-full sm:w-auto">
                   <span class="text-slate-400 shrink-0">Model Engine:</span>
                   <select id="tailor-provider" class="bg-slate-900 border border-slate-800 text-xs text-white rounded-xl px-3 py-2 focus:outline-none w-full sm:w-auto">
-                    <option value="gemini">Google Gemini 1.5 Flash (100% Free)</option>
-                    <option value="groq">Groq Llama 3.3 70B (Fast Free)</option>
+                    <option value="groq">Groq Llama 3.3 70B (Ultra-Fast Free)</option>
+                    <option value="gemini">Google Gemini 2.5 Flash (Free)</option>
                     <option value="offline">Smart Heuristic Engine (Offline / Instant)</option>
                   </select>
                 </div>
@@ -320,7 +379,7 @@
           <div id="tailor-results" class="space-y-6 hidden">
             
             <!-- Fit Summary Card -->
-            <div class="glass-card rounded-2xl p-6 border-l-4 border-l-emerald-500">
+            <div class="glass-card rounded-2xl p-6 border-l-4 border-l-emerald-500 no-print">
               <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <div>
                   <span class="text-xs font-mono text-emerald-400 font-bold uppercase tracking-wider">ATS Fit Score</span>
@@ -548,30 +607,96 @@
       <!-- ========================================== -->
       <!-- TAB 3: JOB RADAR (100+ JOBS)               -->
       <!-- ========================================== -->
-      <div id="tab-radar" class="space-y-6 hidden">
+      <div id="tab-radar" class="space-y-5 hidden">
+
+        <!-- 1-Click LinkedIn Fresh-Jobs Sniper (100% Free, Zero Card / Key) -->
+        <div class="glass-card rounded-2xl p-4 sm:p-5 border border-blue-500/30 bg-gradient-to-r from-blue-950/30 to-slate-900/60 space-y-3">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+              <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                <i class="fa-brands fa-linkedin text-sky-400 text-base"></i> 1-Click LinkedIn Fresh-Jobs Sniper
+                <span class="text-[9px] font-mono px-2 py-0.5 rounded-full bg-sky-500/15 text-sky-300 border border-sky-500/30">FREE • FIRST-APPLICANT ADVANTAGE</span>
+              </h3>
+              <p class="text-[11px] text-slate-400 mt-0.5">Launch live filtered LinkedIn, Wellfound & Naukri feeds posted within the last hour / 24h so you apply before the crowd.</p>
+            </div>
+            <button onclick="openQuickImportModal()" class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold flex items-center gap-1.5 shrink-0 transition shadow-sm">
+              <i class="fa-solid fa-paste"></i> Paste LinkedIn JD & Tailor
+            </button>
+          </div>
+
+          <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 pt-2 border-t border-slate-800/70">
+            <select id="sniper-role" class="bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-sky-500">
+              <option value="Backend Engineer Node.js Python">Backend (Node / Python)</option>
+              <option value="Full Stack Developer React Node.js">Full Stack (React / Node)</option>
+              <option value="SDE 1 Software Engineer">SDE-1 / Software Engineer</option>
+              <option value="SDE 2 Backend Developer">SDE-2 Backend</option>
+              <option value="Python Backend Engineer">Python / FastAPI / Flask</option>
+            </select>
+            <select id="sniper-loc" class="bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-sky-500">
+              <option value="Bengaluru, Karnataka, India">Bengaluru</option>
+              <option value="Delhi NCR, India">Delhi NCR (Noida / Gurgaon)</option>
+              <option value="India">All India (Hybrid / Remote)</option>
+              <option value="Remote">Remote Worldwide</option>
+            </select>
+            <select id="sniper-time" class="bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-amber-300 font-medium focus:outline-none focus:border-sky-500">
+              <option value="r3600">⚡ Past 1 Hour (Golden Window)</option>
+              <option value="r86400" selected>🔥 Past 24 Hours</option>
+              <option value="r604800">Past 7 Days</option>
+            </select>
+            <label class="flex items-center gap-2 bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5 text-[11px] text-slate-300 cursor-pointer">
+              <input type="checkbox" id="sniper-easy-apply" checked class="accent-sky-500 rounded">
+              <span>Easy Apply Only</span>
+            </label>
+            <label class="flex items-center gap-2 bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5 text-[11px] text-slate-300 cursor-pointer">
+              <input type="checkbox" id="sniper-early" checked class="accent-emerald-500 rounded">
+              <span>&lt;10 Applicants</span>
+            </label>
+            <button onclick="launchLinkedInSniper()" class="px-3 py-1.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition shadow-md shadow-sky-600/20">
+              <i class="fa-solid fa-crosshairs"></i> Snipe LinkedIn
+            </button>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2 text-[11px]">
+            <span class="text-slate-500 font-mono">Also Snipe:</span>
+            <a href="https://wellfound.com/role/l/backend-engineer/india" target="_blank" class="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-amber-300 border border-slate-800 transition flex items-center gap-1">
+              Wellfound Startups <i class="fa-solid fa-arrow-up-right-from-square text-[9px]"></i>
+            </a>
+            <a href="https://www.naukri.com/nodejs-python-backend-developer-jobs?jobAge=1" target="_blank" class="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-emerald-300 border border-slate-800 transition flex items-center gap-1">
+              Naukri (Last 24h) <i class="fa-solid fa-arrow-up-right-from-square text-[9px]"></i>
+            </a>
+            <a href="https://www.instahyre.com/candidate/opportunities/" target="_blank" class="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-purple-300 border border-slate-800 transition flex items-center gap-1">
+              Instahyre Direct <i class="fa-solid fa-arrow-up-right-from-square text-[9px]"></i>
+            </a>
+          </div>
+        </div>
         
-        <!-- Filter Controls Bar -->
-        <div class="glass-card rounded-2xl p-5 space-y-4 border border-slate-800">
+        <!-- Filter Controls Bar (Collapsible on Mobile) -->
+        <div class="glass-card rounded-2xl p-4 sm:p-5 space-y-3 border border-slate-800">
           <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div>
               <div class="flex items-center gap-2">
                 <h3 class="text-base font-bold text-white flex items-center gap-2">
-                  <i class="fa-solid fa-satellite-dish text-emerald-400"></i> Automated Job Radar
+                  <i class="fa-solid fa-satellite-dish text-emerald-400"></i> Live ATS & Curated Job Radar
                 </h3>
                 <span class="text-xs font-mono font-bold text-emerald-400 bg-emerald-950/80 border border-emerald-500/30 px-2.5 py-0.5 rounded-full" id="radar-count-badge">
-                  108 Active Jobs
+                  100+ Active Jobs
                 </span>
               </div>
-              <p class="text-xs text-slate-400 mt-0.5">Aggregates curated Indian tech, unicorns, and global developer APIs</p>
+              <p class="text-xs text-slate-400 mt-0.5">Pulls real-time Greenhouse startup openings + verified Indian unicorns & MNCs</p>
             </div>
             
-            <button onclick="loadRadarJobs()" class="px-4 py-2 text-xs font-semibold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white transition flex items-center gap-1.5 shadow-md shadow-emerald-600/25 shrink-0">
-              <i class="fa-solid fa-arrows-rotate"></i> Refresh Feed
-            </button>
+            <div class="flex items-center gap-2 w-full sm:w-auto">
+              <button onclick="toggleRadarMobileFilters()" class="sm:hidden flex-1 px-3 py-2 text-xs font-semibold rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 flex items-center justify-center gap-1.5">
+                <i class="fa-solid fa-sliders"></i> Filters
+              </button>
+              <button onclick="loadRadarJobs()" class="flex-1 sm:flex-none px-4 py-2 text-xs font-semibold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white transition flex items-center justify-center gap-1.5 shadow-md shadow-emerald-600/25 shrink-0">
+                <i class="fa-solid fa-arrows-rotate"></i> Refresh Feed
+              </button>
+            </div>
           </div>
 
           <!-- 6-Factor Multi-Tier Filters Row -->
-          <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 pt-2 border-t border-slate-800/80">
+          <div id="radar-filters-panel" class="hidden sm:grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 pt-2 border-t border-slate-800/80">
             <div>
               <label class="block text-[11px] font-mono text-slate-400 mb-1">Search Keywords</label>
               <div class="relative">
@@ -637,9 +762,163 @@
       </div>
 
       <!-- ========================================== -->
+      <!-- TAB 3B: TOP 200 DSA PATTERN HUB (PY & C++) -->
+      <!-- ========================================== -->
+      <div id="tab-dsa" class="space-y-5 hidden">
+        <!-- Progress & Controls Header -->
+        <div class="glass-card rounded-2xl p-5 border border-cyan-500/20 space-y-4">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h3 class="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+                <i class="fa-solid fa-code text-cyan-400"></i> Top 200 Interview DSA Hub
+                <span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">Python & C++17</span>
+              </h3>
+              <p class="text-xs text-slate-400 mt-0.5">15 core patterns with 30-sec recognition tricks, complexity breakdown, and AI Dry-Run Tutor</p>
+            </div>
+            <div class="flex items-center gap-2">
+              <button onclick="filterDsaRevision()" class="px-3 py-1.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 text-xs font-semibold transition flex items-center gap-1.5">
+                <i class="fa-solid fa-repeat"></i> Revision Queue (<span id="dsa-revisit-count">0</span>)
+              </button>
+              <div class="px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-xs font-mono text-emerald-400 font-bold">
+                <span id="dsa-solved-count">0</span> / 200 Solved
+              </div>
+            </div>
+          </div>
+
+          <!-- Progress Bar -->
+          <div class="w-full h-2 rounded-full bg-slate-900 overflow-hidden border border-slate-800">
+            <div id="dsa-progress-bar" class="h-full bg-gradient-to-r from-cyan-500 to-emerald-500 transition-all duration-300" style="width: 0%"></div>
+          </div>
+
+          <!-- Filters Row -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-1">
+            <div class="relative">
+              <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-500 text-xs"></i>
+              <input type="text" id="dsa-search" oninput="applyDsaFilters()" placeholder="Search problem, trick, company..." class="w-full bg-slate-950 border border-slate-800 rounded-xl pl-8 pr-3 py-1.5 text-xs text-white focus:outline-none focus:border-cyan-500">
+            </div>
+            <select id="dsa-filter-pattern" onchange="applyDsaFilters()" class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-cyan-500">
+              <option value="all">All 15 Core Patterns (200)</option>
+            </select>
+            <select id="dsa-filter-diff" onchange="applyDsaFilters()" class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-cyan-500">
+              <option value="all">All Difficulties</option>
+              <option value="Easy">Easy</option>
+              <option value="Medium">Medium</option>
+              <option value="Hard">Hard</option>
+            </select>
+            <select id="dsa-filter-status" onchange="applyDsaFilters()" class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-cyan-500">
+              <option value="all">All Statuses</option>
+              <option value="todo">Todo Only</option>
+              <option value="solved">Solved</option>
+              <option value="revisit">Needs Revision</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Problems List -->
+        <div class="glass-card rounded-2xl border border-slate-800 overflow-hidden">
+          <div class="divide-y divide-slate-800/70" id="dsa-problems-list">
+            <div class="p-8 text-center text-xs font-mono text-slate-400">Loading 200 DSA Problems...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ========================================== -->
+      <!-- TAB 3C: SYSTEM DESIGN ACADEMY (HLD & LLD)  -->
+      <!-- ========================================== -->
+      <div id="tab-sysdesign" class="space-y-6 hidden">
+        <div class="glass-card rounded-2xl p-5 border border-indigo-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h3 class="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+              <i class="fa-solid fa-diagram-project text-indigo-400"></i> System Design Made Easy + Case Studies
+            </h3>
+            <p class="text-xs text-slate-400 mt-0.5">Visual backend building blocks, HLD Indian unicorn architectures, and LLD Machine Coding in Python & C++</p>
+          </div>
+          <div class="flex items-center gap-2 bg-slate-950 p-1 rounded-xl border border-slate-800 shrink-0">
+            <button onclick="switchSysDesignSubtab('blocks')" id="sd-sub-blocks" class="px-3.5 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-semibold transition">8 Building Blocks</button>
+            <button onclick="switchSysDesignSubtab('cases')" id="sd-sub-cases" class="px-3.5 py-1.5 rounded-lg text-slate-400 hover:text-white text-xs font-semibold transition">8 HLD/LLD Case Studies</button>
+          </div>
+        </div>
+
+        <!-- Subtab 1: Visual Building Blocks -->
+        <div id="sd-panel-blocks" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+
+        <!-- Subtab 2: Case Studies (Master-Detail Responsive Layout) -->
+        <div id="sd-panel-cases" class="hidden grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
+          <div class="space-y-2 lg:col-span-1" id="sd-cases-sidebar"></div>
+          <div class="lg:col-span-2 glass-card rounded-2xl p-5 sm:p-6 border border-slate-800 space-y-5" id="sd-case-detail">
+            <div class="text-xs text-slate-400">Select a case study to explore architecture, trade-offs, and AI critique.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ========================================== -->
+      <!-- TAB 3D: CORE CS RAPID-FIRE SHEET           -->
+      <!-- ========================================== -->
+      <div id="tab-corecs" class="space-y-5 hidden">
+        <div class="glass-card rounded-2xl p-5 border border-rose-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h3 class="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+              <i class="fa-solid fa-database text-rose-400"></i> Backend Core CS Rapid-Fire Sheet
+            </h3>
+            <p class="text-xs text-slate-400 mt-0.5">High-frequency SQL Window Functions, DBMS MVCC/Isolation, OS Concurrency, and HTTP/JWT/CORS internals</p>
+          </div>
+          <div id="corecs-cat-pills" class="flex flex-wrap gap-1.5"></div>
+        </div>
+        <div id="corecs-items-container" class="space-y-3"></div>
+      </div>
+
+      <!-- ========================================== -->
       <!-- TAB 4: INTERVIEW PREP & SIMULATOR SUITE   -->
       <!-- ========================================== -->
       <div id="tab-prep" class="space-y-6 hidden">
+        <!-- Interactive AI Mock Interview "Grill Mode" -->
+        <div class="glass-card rounded-2xl p-5 sm:p-6 border border-emerald-500/30 bg-gradient-to-br from-emerald-950/20 to-slate-900/70 space-y-4">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-800">
+            <div>
+              <h3 class="text-sm sm:text-base font-bold text-white flex items-center gap-2">
+                <i class="fa-solid fa-microphone-lines text-emerald-400"></i> AI Mock Interview ("Grill Mode")
+                <span class="text-[9px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">MOBILE READY</span>
+              </h3>
+              <p class="text-xs text-slate-400 mt-0.5">Practice answering tough backend & design follow-ups; get scored /10 and drilled deeper in real time.</p>
+            </div>
+            <select id="grill-focus" class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500">
+              <option value="backend">Node.js / Python Backend & APIs</option>
+              <option value="sysdesign">System Design & Scaling</option>
+              <option value="dsa">DSA Logic & Complexity</option>
+              <option value="corecs">SQL, DBMS & OS Internals</option>
+            </select>
+          </div>
+
+          <div class="bg-slate-950/80 p-4 rounded-xl border border-slate-800 space-y-2">
+            <span class="text-[10px] font-mono uppercase text-purple-400 font-bold">Interviewer Question:</span>
+            <p id="grill-question" class="text-xs sm:text-sm font-semibold text-white leading-relaxed">
+              Walk me through how you reduced SQL transaction latency by 35% at NexGen—what did EXPLAIN show before vs after, and how would you protect that endpoint from cache stampede under 10x traffic?
+            </p>
+          </div>
+
+          <textarea id="grill-answer" rows="3" placeholder="Type your crisp answer as if talking to a Principal Engineer..." class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"></textarea>
+
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <button onclick="resetGrillQuestion()" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium transition">
+              <i class="fa-solid fa-shuffle"></i> New Prompt
+            </button>
+            <button onclick="submitGrillAnswer()" id="btn-grill-submit" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-md shadow-emerald-600/20 transition">
+              <i class="fa-solid fa-paper-plane"></i> Evaluate & Grill Next
+            </button>
+          </div>
+
+          <div id="grill-feedback-box" class="hidden bg-slate-950 p-4 rounded-xl border border-emerald-500/30 space-y-2 text-xs">
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-emerald-400" id="grill-score-badge">Score: 8/10</span>
+              <span class="text-[10px] font-mono text-slate-500" id="grill-provider-tag"></span>
+            </div>
+            <p class="text-slate-300 leading-relaxed" id="grill-feedback-text"></p>
+            <div class="text-[11px] text-amber-300 bg-amber-950/30 p-2.5 rounded-lg border border-amber-500/20">
+              <strong>Top 1% Framing:</strong> <span id="grill-ideal-bullet"></span>
+            </div>
+          </div>
+        </div>
+
         <!-- Target Header & Selector Card -->
         <div class="glass-card rounded-2xl p-5 sm:p-6">
           <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-5 border-b border-slate-800">
@@ -1029,6 +1308,17 @@ Performance Metrics:
               </button>
             </div>
           </form>
+
+          <!-- Supabase Persistence Guide -->
+          <div class="mt-6 pt-5 border-t border-slate-800 space-y-2">
+            <h4 class="text-xs font-bold text-emerald-400 flex items-center gap-2">
+              <i class="fa-solid fa-database"></i> Persistent Storage (Supabase PostgreSQL on Render)
+            </h4>
+            <p class="text-[11px] text-slate-400 leading-relaxed">
+              To preserve your Kanban applications, tailored PDFs, and Top 200 DSA progress permanently across Render redeploys:
+              Create a free project on <a href="https://supabase.com" target="_blank" class="text-blue-400 underline">Supabase</a>, copy the Transaction/Session Pooler PostgreSQL URI, and add <code class="text-amber-300 bg-slate-950 px-1.5 py-0.5 rounded">DATABASE_URL</code> + <code class="text-amber-300 bg-slate-950 px-1.5 py-0.5 rounded">GROQ_API_KEY</code> inside Render &rarr; Environment.
+            </p>
+          </div>
         </div>
       </div>
 
@@ -1052,6 +1342,190 @@ Performance Metrics:
 
       <div class="p-5 overflow-y-auto custom-scroll flex-1 space-y-4" id="modal-body">
         <!-- Rendered by JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Application Full Details, Scrollable JD & Easy Apply Helper Modal -->
+  <div id="app-detail-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 hidden">
+    <div class="bg-slate-900 border border-slate-700/80 rounded-2xl w-full max-w-3xl max-h-[92vh] flex flex-col overflow-hidden shadow-2xl">
+      <div class="p-4 sm:p-5 border-b border-slate-800 flex items-center justify-between shrink-0 bg-slate-950/80">
+        <div class="min-w-0 pr-3">
+          <div class="flex items-center gap-2">
+            <span id="ad-fit-badge" class="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">94%</span>
+            <h3 class="text-sm sm:text-base font-bold text-white truncate" id="ad-company-title">Company — Role</h3>
+          </div>
+          <p class="text-[11px] text-slate-400 mt-0.5" id="ad-meta">Added Today</p>
+        </div>
+        <div class="flex items-center gap-2 shrink-0">
+          <a id="ad-open-link" href="#" target="_blank" class="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold flex items-center gap-1.5 transition">
+            <i class="fa-solid fa-arrow-up-right-from-square"></i> Apply Link
+          </a>
+          <button onclick="closeAppDetailModal()" class="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition">
+            <i class="fa-solid fa-xmark text-base"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="p-4 sm:p-6 overflow-y-auto custom-scroll flex-1 space-y-5">
+        <!-- Full Scrollable JD -->
+        <div class="space-y-1.5">
+          <span class="text-[11px] font-mono uppercase text-blue-400 font-bold block">Full Job Description / Summary (Scrollable)</span>
+          <div id="ad-jd-box" class="bg-slate-950 p-3.5 rounded-xl border border-slate-800 text-xs text-slate-300 leading-relaxed max-h-44 overflow-y-auto custom-scroll whitespace-pre-wrap"></div>
+        </div>
+
+        <!-- Editable Notes + Follow-Up Copy -->
+        <div class="space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] font-mono uppercase text-amber-400 font-bold">Notes & Follow-Up Tracker</span>
+            <button onclick="copyAppFollowUpDm()" class="text-[11px] text-amber-300 hover:text-amber-200 font-semibold flex items-center gap-1">
+              <i class="fa-regular fa-copy"></i> Copy 3-Day Follow-Up DM
+            </button>
+          </div>
+          <textarea id="ad-notes-input" rows="3" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-blue-500 custom-scroll"></textarea>
+          <div class="flex justify-end">
+            <button onclick="saveAppDetailNotes()" class="px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold border border-slate-700 transition">
+              Save Notes
+            </button>
+          </div>
+        </div>
+
+        <!-- Easy Apply Screening Question Helper -->
+        <div class="bg-slate-950/80 p-4 rounded-xl border border-emerald-500/25 space-y-3">
+          <span class="text-[11px] font-mono uppercase text-emerald-400 font-bold flex items-center gap-1.5">
+            <i class="fa-solid fa-bolt"></i> LinkedIn Easy Apply / Form Screening Answer Generator
+          </span>
+          <div class="flex flex-col sm:flex-row gap-2">
+            <input type="text" id="ad-screen-q" placeholder='e.g. "Why do you want to join us?" or "Describe a scaling challenge"' class="flex-1 bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500">
+            <button onclick="generateAppScreeningAnswer()" id="btn-ad-screen" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shrink-0 transition">
+              Generate Answer
+            </button>
+          </div>
+          <div id="ad-screen-ans-wrap" class="hidden space-y-1.5">
+            <pre id="ad-screen-ans" class="bg-slate-900 p-3 rounded-xl text-xs text-slate-200 whitespace-pre-wrap font-sans leading-relaxed border border-slate-800"></pre>
+            <button onclick="copyToClipboard('ad-screen-ans')" class="text-[11px] text-blue-400 hover:text-blue-300 font-semibold">
+              <i class="fa-regular fa-copy"></i> Copy Answer
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Import LinkedIn JD Modal -->
+  <div id="quick-import-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 hidden">
+    <div class="bg-slate-900 border border-slate-700/80 rounded-2xl w-full max-w-xl overflow-hidden shadow-2xl">
+      <div class="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/80">
+        <h3 class="text-sm font-bold text-white flex items-center gap-2">
+          <i class="fa-brands fa-linkedin text-sky-400"></i> Quick Import LinkedIn / Startup Job
+        </h3>
+        <button onclick="closeQuickImportModal()" class="text-slate-400 hover:text-white p-1"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="p-5 space-y-3">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <input type="text" id="qi-company" placeholder="Company Name (e.g. Zepto)" class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500">
+          <input type="text" id="qi-role" placeholder="Role Title (e.g. Backend SDE-2)" class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500">
+        </div>
+        <input type="url" id="qi-url" placeholder="Paste LinkedIn / Careers Apply URL (optional)" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500">
+        <textarea id="qi-jd" rows="5" placeholder="Paste copied Job Description text here..." class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white font-mono focus:outline-none focus:border-blue-500 custom-scroll"></textarea>
+        <div class="flex flex-wrap justify-end gap-2 pt-2">
+          <button onclick="saveQuickImportToKanban()" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition">
+            Save to Discovered
+          </button>
+          <button onclick="tailorQuickImport()" class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold flex items-center gap-1.5 transition">
+            <i class="fa-solid fa-wand-magic-sparkles text-amber-300"></i> Open & Tailor Resume
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Top 200 DSA Study & AI Tutor Modal -->
+  <div id="dsa-study-modal" class="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 hidden">
+    <div class="bg-slate-900 border border-slate-700/80 rounded-2xl w-full max-w-4xl max-h-[94vh] flex flex-col overflow-hidden shadow-2xl">
+      <div class="p-4 sm:p-5 border-b border-slate-800 flex items-center justify-between gap-2 shrink-0 bg-slate-950/90">
+        <div class="min-w-0">
+          <div class="flex flex-wrap items-center gap-2">
+            <span id="dsa-m-num" class="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 font-bold">#1</span>
+            <span id="dsa-m-diff" class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 font-bold">Medium</span>
+            <span id="dsa-m-comp" class="text-[10px] font-mono text-slate-400"></span>
+          </div>
+          <h3 class="text-sm sm:text-base font-bold text-white truncate mt-1" id="dsa-m-title">Problem Title</h3>
+        </div>
+        <div class="flex items-center gap-2 shrink-0">
+          <a id="dsa-m-lc" href="#" target="_blank" class="px-3 py-1.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 text-xs font-semibold flex items-center gap-1.5 transition">
+            LeetCode <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+          </a>
+          <button onclick="closeDsaModal()" class="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+      </div>
+
+      <div class="p-4 sm:p-6 overflow-y-auto custom-scroll flex-1 space-y-5">
+        <!-- Status Switcher -->
+        <div class="flex flex-wrap items-center justify-between gap-3 bg-slate-950 p-3 rounded-xl border border-slate-800">
+          <span class="text-xs font-mono text-slate-400">Pattern: <strong id="dsa-m-pattern" class="text-cyan-300"></strong></span>
+          <div class="flex items-center gap-1.5">
+            <button onclick="setActiveDsaStatus('todo')" id="dsa-st-todo" class="px-3 py-1 rounded-lg text-xs font-semibold border transition">Todo</button>
+            <button onclick="setActiveDsaStatus('solved')" id="dsa-st-solved" class="px-3 py-1 rounded-lg text-xs font-semibold border transition">Solved ✓</button>
+            <button onclick="setActiveDsaStatus('revisit')" id="dsa-st-revisit" class="px-3 py-1 rounded-lg text-xs font-semibold border transition">Revise ↻</button>
+          </div>
+        </div>
+
+        <!-- Recognition Trick & Intuition -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div class="bg-amber-950/20 border border-amber-500/30 rounded-xl p-3.5 space-y-1">
+            <span class="text-[10px] font-mono uppercase text-amber-400 font-bold flex items-center gap-1.5">
+              <i class="fa-solid fa-lightbulb"></i> 30-Second Pattern Trick
+            </span>
+            <p id="dsa-m-trick" class="text-xs text-slate-200 leading-relaxed"></p>
+          </div>
+          <div class="bg-blue-950/20 border border-blue-500/30 rounded-xl p-3.5 space-y-1">
+            <span class="text-[10px] font-mono uppercase text-blue-400 font-bold flex items-center gap-1.5">
+              <i class="fa-solid fa-stairs"></i> Brute &rarr; Optimal Intuition
+            </span>
+            <p id="dsa-m-intuition" class="text-xs text-slate-200 leading-relaxed"></p>
+          </div>
+        </div>
+
+        <!-- Python / C++ Solution Tabs -->
+        <div class="bg-slate-950 border border-slate-800 rounded-xl overflow-hidden">
+          <div class="flex items-center justify-between px-3 py-2 border-b border-slate-800 bg-slate-900/80">
+            <div class="flex items-center gap-1.5">
+              <button onclick="switchDsaLang('python')" id="dsa-lang-py" class="px-3 py-1 rounded-lg bg-cyan-600 text-white text-xs font-semibold transition">Python 3</button>
+              <button onclick="switchDsaLang('cpp')" id="dsa-lang-cpp" class="px-3 py-1 rounded-lg text-slate-400 hover:text-white text-xs font-semibold transition">C++17</button>
+            </div>
+            <button onclick="copyToClipboard('dsa-m-code')" class="text-xs text-blue-400 hover:text-blue-300 font-medium flex items-center gap-1">
+              <i class="fa-regular fa-copy"></i> Copy Code
+            </button>
+          </div>
+          <pre id="dsa-m-code" class="p-4 text-xs font-mono text-emerald-300 overflow-x-auto custom-scroll leading-relaxed"></pre>
+        </div>
+
+        <!-- Personal Notes -->
+        <div class="space-y-1.5">
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] font-mono uppercase text-slate-400 font-bold">My Edge-Case Notes</span>
+            <button onclick="saveActiveDsaNotes()" class="text-xs text-cyan-400 hover:text-cyan-300 font-semibold">Save Notes</button>
+          </div>
+          <textarea id="dsa-m-notes" rows="2" placeholder="Jot down edge cases or mistakes you made..." class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-cyan-500"></textarea>
+        </div>
+
+        <!-- AI DSA Tutor -->
+        <div class="bg-purple-950/15 border border-purple-500/30 rounded-xl p-4 space-y-3">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <span class="text-xs font-bold text-purple-300 flex items-center gap-1.5">
+              <i class="fa-solid fa-robot"></i> AI DSA Tutor (Groq / Gemini)
+            </span>
+            <div class="flex flex-wrap gap-1.5">
+              <button onclick="askDsaAiTutor('dry_run')" class="px-2.5 py-1 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-[11px] font-semibold transition">AI Dry Run</button>
+              <button onclick="askDsaAiTutor('hint')" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] font-semibold transition">3 Hints</button>
+              <button onclick="askDsaAiTutor('quiz')" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-300 text-[11px] font-semibold transition">Follow-Up Twist</button>
+              <button onclick="askDsaAiTutor('debug')" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-rose-300 text-[11px] font-semibold transition">Check My Input/Code</button>
+            </div>
+          </div>
+          <input type="text" id="dsa-ai-input" placeholder="Optional: custom test array e.g. [2,7,11,15] OR paste snippet to debug..." class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-purple-500">
+          <pre id="dsa-ai-output" class="hidden bg-slate-950 p-3.5 rounded-xl border border-slate-800 text-xs font-mono text-slate-200 whitespace-pre-wrap leading-relaxed max-h-56 overflow-y-auto custom-scroll"></pre>
+        </div>
       </div>
     </div>
   </div>
@@ -1099,21 +1573,21 @@ Performance Metrics:
       <i class="fa-solid fa-table-columns text-sm"></i>
       <span>Pipeline</span>
     </button>
-    <button onclick="switchTab('tailor')" id="bnav-tailor" class="flex flex-col items-center gap-0.5 text-slate-400 text-[10px] font-medium py-1 px-2 transition">
-      <i class="fa-solid fa-wand-magic-sparkles text-sm"></i>
-      <span>Tailor</span>
-    </button>
     <button onclick="switchTab('radar')" id="bnav-radar" class="flex flex-col items-center gap-0.5 text-slate-400 text-[10px] font-medium py-1 px-2 transition">
       <i class="fa-solid fa-satellite-dish text-sm"></i>
       <span>Radar</span>
     </button>
+    <button onclick="switchTab('dsa')" id="bnav-dsa" class="flex flex-col items-center gap-0.5 text-slate-400 text-[10px] font-medium py-1 px-2 transition">
+      <i class="fa-solid fa-code text-sm"></i>
+      <span>200 DSA</span>
+    </button>
+    <button onclick="switchTab('sysdesign')" id="bnav-sysdesign" class="flex flex-col items-center gap-0.5 text-slate-400 text-[10px] font-medium py-1 px-2 transition">
+      <i class="fa-solid fa-diagram-project text-sm"></i>
+      <span>Design</span>
+    </button>
     <button onclick="switchTab('prep')" id="bnav-prep" class="flex flex-col items-center gap-0.5 text-slate-400 text-[10px] font-medium py-1 px-2 transition">
       <i class="fa-solid fa-brain text-sm"></i>
       <span>Prep</span>
-    </button>
-    <button onclick="switchTab('vault')" id="bnav-vault" class="flex flex-col items-center gap-0.5 text-slate-400 text-[10px] font-medium py-1 px-2 transition">
-      <i class="fa-solid fa-folder-open text-sm"></i>
-      <span>Vault</span>
     </button>
   </nav>
 

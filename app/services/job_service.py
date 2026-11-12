@@ -1,9 +1,14 @@
 import requests
 import json
 import re
+import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import List, Dict, Any, Optional
 
 class JobService:
+
+    _ATS_CACHE: Dict[str, Any] = {"ts": 0.0, "jobs": []}
+    _ATS_CACHE_TTL = 600 # 10 minutes
 
     # Verified Official Career Portals Map
     OFFICIAL_CAREERS_MAP: Dict[str, str] = {
@@ -685,6 +690,74 @@ class JobService:
         return "16-24L"
 
     @classmethod
+    def _fetch_single_greenhouse(cls, board_slug: str, company_name: str, company_type: str) -> List[Dict[str, Any]]:
+        results = []
+        try:
+            url = f"https://boards-api.greenhouse.io/v1/boards/{board_slug}/jobs"
+            resp = requests.get(url, headers={"User-Agent": "CareerOS-ATS/1.0"}, timeout=2.5)
+            if resp.status_code != 200:
+                return []
+            tech_kws = ("backend", "back-end", "software engineer", "full stack", "fullstack", "node", "python", "api", "distributed", "platform engineer", "sde")
+            for item in resp.json().get("jobs", []):
+                title = item.get("title", "")
+                loc = (item.get("location") or {}).get("name", "Remote / Hybrid")
+                t_low = title.lower()
+                l_low = loc.lower()
+                if not any(k in t_low for k in tech_kws):
+                    continue
+                if not any(r in l_low for r in ("india", "bengaluru", "bangalore", "noida", "gurgaon", "hyderabad", "pune", "mumbai", "remote", "anywhere")):
+                    continue
+                results.append({
+                    "id": f"gh-{board_slug}-{item.get('id')}",
+                    "title": title,
+                    "company": company_name,
+                    "location": loc,
+                    "role_type": "fullstack" if "full" in t_low else "backend",
+                    "level": "sde2" if ("senior" in t_low or "ii" in t_low or "staff" in t_low or "2" in t_low) else "sde1",
+                    "salary": "$75,000 - $125,000 USD" if "india" not in l_low and "bengaluru" not in l_low else "₹22L - ₹38L + ESOPs",
+                    "source": "Greenhouse Live ATS",
+                    "company_type": company_type,
+                    "match_score": 95 if ("backend" in t_low or "node" in t_low or "python" in t_low) else 90,
+                    "tags": ["Live ATS", "Direct Apply", "Backend" if "backend" in t_low else "Software"],
+                    "url": item.get("absolute_url") or cls.OFFICIAL_CAREERS_MAP.get(company_name, ""),
+                    "description": f"Live verified opening on {company_name}'s official Greenhouse ATS ({loc}). Direct application link goes straight to the official submission form."
+                })
+        except Exception:
+            pass
+        return results[:8]
+
+    @classmethod
+    def fetch_public_ats_jobs(cls) -> List[Dict[str, Any]]:
+        """Fetches real-time verified engineering jobs from public Greenhouse ATS endpoints (zero API keys)."""
+        now = time.time()
+        if cls._ATS_CACHE["jobs"] and (now - cls._ATS_CACHE["ts"]) < cls._ATS_CACHE_TTL:
+            return cls._ATS_CACHE["jobs"]
+
+        boards = [
+            ("postman", "Postman", "cloud"),
+            ("browserstack", "BrowserStack", "cloud"),
+            ("groww", "Groww", "startup"),
+            ("vercel", "Vercel", "cloud"),
+            ("remotecom", "Remote.com", "cloud"),
+            ("deel", "Deel", "cloud"),
+            ("sentry", "Sentry", "cloud"),
+            ("gitlab", "GitLab", "cloud"),
+            ("razorpay", "Razorpay", "startup"),
+            ("cred", "CRED", "startup"),
+        ]
+        live_jobs: List[Dict[str, Any]] = []
+        with ThreadPoolExecutor(max_workers=6) as executor:
+            futures = [executor.submit(cls._fetch_single_greenhouse, slug, name, ctype) for slug, name, ctype in boards]
+            for fut in as_completed(futures, timeout=3.5):
+                try:
+                    live_jobs.extend(fut.result())
+                except Exception:
+                    pass
+
+        cls._ATS_CACHE = {"ts": now, "jobs": live_jobs}
+        return live_jobs
+
+    @classmethod
     def fetch_radar_jobs(
         cls,
         query: str = "all",
@@ -695,11 +768,19 @@ class JobService:
         limit: int = 200
     ) -> List[Dict[str, Any]]:
         """
-        Combines our rich verified Indian tech ecosystem with real-time live API jobs.
-        Removes foreign/European listings, guarantees 100% verified direct links,
+        Combines our rich verified Indian tech ecosystem with real-time live ATS + Jobicy API jobs.
+        Removes foreign/European listings, guarantees verified direct links,
         and provides instant multi-factor filtering by company type and salary benchmark.
         """
-        all_jobs: List[Dict[str, Any]] = [dict(j) for j in cls.CURATED_JOBS]
+        all_jobs: List[Dict[str, Any]] = []
+
+        # 0. Live Public Startup ATS Openings (Greenhouse - direct apply links, zero API key)
+        try:
+            all_jobs.extend(cls.fetch_public_ats_jobs())
+        except Exception as e:
+            print(f"[JobService] Public ATS fetch skipped: {e}")
+
+        all_jobs.extend([dict(j) for j in cls.CURATED_JOBS])
 
         # 1. Fetch live tech jobs from Jobicy API (US/Global Remote Developer Roles)
         try:
@@ -850,10 +931,12 @@ class JobService:
         # 3. Enrich all jobs with official careers links, company_type, and salary_range
         for j in all_jobs:
             comp_name = j.get("company", "")
-            if comp_name in cls.OFFICIAL_CAREERS_MAP:
-                j["url"] = cls.OFFICIAL_CAREERS_MAP[comp_name]
-            elif not j.get("url"):
-                j["url"] = f"https://www.google.com/search?q={comp_name}+careers"
+            is_live_direct = j.get("source") in ("Greenhouse Live ATS", "Jobicy Live") and bool(j.get("url"))
+            if not is_live_direct:
+                if comp_name in cls.OFFICIAL_CAREERS_MAP:
+                    j["url"] = cls.OFFICIAL_CAREERS_MAP[comp_name]
+                elif not j.get("url"):
+                    j["url"] = f"https://www.google.com/search?q={comp_name}+careers"
 
             # Company Type
             if not j.get("company_type"):
