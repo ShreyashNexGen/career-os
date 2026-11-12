@@ -4,9 +4,22 @@ let currentUser = null;
 let currentTab = 'pipeline';
 let currentDocSubTab = 'visual';
 let allRadarJobs = [];
+let radarJobsMap = {};
+let vaultDocsMap = {};
 let activeGeneratedPackage = null;
 let allApplicationsMap = {};
 let activeDetailAppId = null;
+
+// Attach persisted JWT automatically for workspace switching
+const _origFetch = window.fetch.bind(window);
+window.fetch = function(input, init = {}) {
+  const tok = localStorage.getItem('careeros_token');
+  if (tok && typeof input === 'string' && input.startsWith('/api/')) {
+    init = Object.assign({}, init);
+    init.headers = Object.assign({}, init.headers || {}, { 'Authorization': `Bearer ${tok}` });
+  }
+  return _origFetch(input, init);
+};
 
 document.addEventListener('DOMContentLoaded', async () => {
   await initUser();
@@ -166,14 +179,22 @@ async function switchUserModal() {
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({ email: 'friend@example.com', password: 'demo123' })
     });
-    if (res.ok) location.reload();
+    if (res.ok) {
+      const data = await res.json();
+      localStorage.setItem('careeros_token', data.access_token);
+      location.reload();
+    }
   } else if (choice === "1") {
     const res = await fetch('/api/auth/login', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({ email: 'shreyashshukla7398554573@gmail.com', password: 'admin123' })
     });
-    if (res.ok) location.reload();
+    if (res.ok) {
+      const data = await res.json();
+      localStorage.setItem('careeros_token', data.access_token);
+      location.reload();
+    }
   }
 }
 
@@ -268,7 +289,7 @@ async function loadApplications() {
             <button onclick="openAppDetailModal(${app.id})" title="View Full JD & Notes" class="text-sky-400 hover:text-sky-300 text-[11px] p-1 rounded bg-sky-950/40 border border-sky-500/30 transition">
               <i class="fa-solid fa-expand"></i>
             </button>
-            <button onclick="openInterviewModal(${app.id}, '${app.company.replace(/'/g, "\\'")}', '${app.role.replace(/'/g, "\\'")}')" title="Interview Prep Kit" class="text-purple-400 hover:text-purple-300 text-[11px] p-1 rounded bg-purple-950/50 border border-purple-500/30 transition">
+            <button onclick="openInterviewModalById(${app.id})" title="Interview Prep Kit" class="text-purple-400 hover:text-purple-300 text-[11px] p-1 rounded bg-purple-950/50 border border-purple-500/30 transition">
               <i class="fa-solid fa-brain"></i>
             </button>
             <button onclick="deleteApp(${app.id})" title="Remove" class="text-slate-500 hover:text-rose-400 text-[11px] p-1 rounded transition">
@@ -303,7 +324,7 @@ async function loadApplications() {
         document.getElementById('followup-queue-names').innerText =
           `Ready for polite Day 3+ bump: ${followUpDue.map(x => `${x.app.company} (${x.diffDays}d)`).join(', ')}`;
         document.getElementById('followup-queue-actions').innerHTML = followUpDue.slice(0, 3).map(x => `
-          <button onclick="copyFollowUpTemplate('${x.app.company.replace(/'/g, "\\'")}', '${x.app.role.replace(/'/g, "\\'")}')" class="px-2.5 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 text-[11px] font-semibold transition">
+          <button onclick="copyFollowUpByAppId(${x.app.id})" class="px-2.5 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 text-[11px] font-semibold transition">
             <i class="fa-regular fa-copy"></i> DM ${x.app.company}
           </button>
         `).join('');
@@ -682,6 +703,7 @@ function renderRadarGrid(jobs) {
   }
 
   jobs.forEach(job => {
+    radarJobsMap[String(job.id)] = job;
     const card = document.createElement('div');
     card.className = 'glass-card rounded-2xl p-5 flex flex-col justify-between hover:border-emerald-500/50 hover:shadow-lg hover:shadow-emerald-500/10 transition-all';
     
@@ -721,7 +743,7 @@ function renderRadarGrid(jobs) {
           <a href="${jobUrl}" target="_blank" class="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-[11px] font-medium transition flex items-center gap-1.5" title="Direct to Official Portal">
             <i class="fa-solid fa-arrow-up-right-from-square text-emerald-400"></i> Direct Apply
           </a>
-          <button onclick='tailorFromRadar(${JSON.stringify(job).replace(/'/g, "&#39;")})' class="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-semibold transition flex items-center gap-1.5 shadow-sm">
+          <button onclick="tailorFromRadarById('${encodeURIComponent(String(job.id))}')" class="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-semibold transition flex items-center gap-1.5 shadow-sm">
             <i class="fa-solid fa-wand-magic-sparkles text-amber-300"></i> Tailor Pack
           </button>
         </div>
@@ -729,6 +751,12 @@ function renderRadarGrid(jobs) {
     `;
     grid.appendChild(card);
   });
+}
+
+function tailorFromRadarById(encodedId) {
+  const job = radarJobsMap[decodeURIComponent(encodedId)];
+  if (!job) return;
+  tailorFromRadar(job);
 }
 
 function tailorFromRadar(job) {
@@ -768,6 +796,13 @@ async function calculateSalary() {
 }
 
 // --- Application Details & Interview Prep Modal ---
+function openInterviewModalById(appId) {
+  const app = allApplicationsMap[appId];
+  const company = app ? app.company : 'Target Company';
+  const role = app ? app.role : 'Software Engineer';
+  return openInterviewModal(appId, company, role);
+}
+
 async function openInterviewModal(appId, company, role) {
   const modal = document.getElementById('global-modal');
   const title = document.getElementById('modal-title');
@@ -843,6 +878,7 @@ async function loadVaultDocuments() {
     }
 
     docs.forEach(d => {
+      vaultDocsMap[d.id] = d;
       const tr = document.createElement('tr');
       tr.className = 'hover:bg-slate-800/40 transition';
       
@@ -877,9 +913,13 @@ async function loadVaultDocuments() {
 
 async function previewDoc(docId) {
   try {
-    const res = await fetch(`/api/documents/${docId}`);
-    if (!res.ok) return;
-    const d = await res.json();
+    let d = vaultDocsMap[docId];
+    if (!d) {
+      const res = await fetch(`/api/documents/${docId}`);
+      if (!res.ok) return;
+      d = await res.json();
+      vaultDocsMap[docId] = d;
+    }
     activeModalDoc = d;
 
     const modal = document.getElementById('doc-preview-modal');
@@ -1029,7 +1069,7 @@ function downloadModalTxt() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `${activeModalDoc.company}_${activeModalDoc.role}.${activeModalDoc.latex_text ? 'tex' : 'txt'}`;
+  a.download = `${activeModalDoc.company}_${activeModalDoc.role}.txt`;
   a.click();
   showToast('Downloaded text file!');
 }
@@ -1447,6 +1487,12 @@ async function saveAppDetailNotes() {
   }
 }
 
+function copyFollowUpByAppId(appId) {
+  const app = allApplicationsMap[appId];
+  if (!app) return;
+  copyFollowUpTemplate(app.company, app.role);
+}
+
 function copyFollowUpTemplate(company, role) {
   const msg = `Hi [Hiring Manager/Recruiter],\n\nFollowing up politely on my application for the ${role} role at ${company}. With 2+ years building 250+ RESTful APIs in Node.js & Python and cutting SQL transaction latency by 35% via composite indexing, I'd love a brief chat on how I can contribute immediately to your backend systems.\n\nBest,\nShreyash Shukla\nhttps://linkedin.com/in/shuklashreyash`;
   navigator.clipboard.writeText(msg);
@@ -1495,17 +1541,21 @@ async function generateAppScreeningAnswer() {
 // ==========================================
 // DAILY MOMENTUM TRACKER
 // ==========================================
+function applyMomentumData(m) {
+  const aEl = document.getElementById('mom-apps');
+  const dEl = document.getElementById('mom-dsa');
+  const sEl = document.getElementById('mom-design');
+  if (aEl) aEl.innerText = `${m.apps_count}/3`;
+  if (dEl) dEl.innerText = `${m.dsa_count}/2`;
+  if (sEl) sEl.innerText = `${m.design_count}/1`;
+}
+
 async function loadMomentum() {
   try {
     const res = await fetch('/api/momentum');
     if (!res.ok) return;
     const m = await res.json();
-    const aEl = document.getElementById('mom-apps');
-    const dEl = document.getElementById('mom-dsa');
-    const sEl = document.getElementById('mom-design');
-    if (aEl) aEl.innerText = `${m.apps_count}/3`;
-    if (dEl) dEl.innerText = `${m.dsa_count}/2`;
-    if (sEl) sEl.innerText = `${m.design_count}/1`;
+    applyMomentumData(m);
   } catch (e) {}
 }
 
@@ -1517,7 +1567,8 @@ async function bumpMomentum(metric) {
       body: JSON.stringify({ metric, delta: 1 })
     });
     if (res.ok) {
-      loadMomentum();
+      const m = await res.json();
+      applyMomentumData(m);
       showToast(`Momentum logged (+1 ${metric.toUpperCase()})!`);
     }
   } catch (e) {}

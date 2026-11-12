@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CareerOS | AI-Powered Job Search Platform & Pipeline</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%232563eb'/><path d='M56 14L24 56h24l-4 30 32-42H52l4-30z' fill='white'/></svg>">
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -275,7 +276,7 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5 w-full items-start">
           
           <!-- Column 1: Discovered -->
-          <div id="kanban-wrap-discovered" class="w-full bg-slate-900/70 rounded-2xl p-3 border border-slate-800/80 flex flex-col shadow-sm">
+          <div id="kanban-wrap-discovered" class="w-full bg-slate-900/70 rounded-2xl p-3 border border-slate-800/80 flex lg:!flex flex-col shadow-sm">
             <div class="flex items-center justify-between pb-2.5 border-b border-slate-800 text-xs font-semibold text-slate-300">
               <span class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-slate-400"></span> Discovered</span>
               <span class="font-mono text-[10px] bg-slate-800 px-2 py-0.5 rounded text-slate-300 font-bold" id="col-count-discovered">0</span>
@@ -284,7 +285,7 @@
           </div>
 
           <!-- Column 2: Drafted -->
-          <div id="kanban-wrap-drafted" class="w-full bg-slate-900/70 rounded-2xl p-3 border border-slate-800/80 flex flex-col shadow-sm">
+          <div id="kanban-wrap-drafted" class="w-full bg-slate-900/70 rounded-2xl p-3 border border-slate-800/80 flex lg:!flex flex-col shadow-sm">
             <div class="flex items-center justify-between pb-2.5 border-b border-slate-800 text-xs font-semibold text-amber-400">
               <span class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-amber-400"></span> Tailored / Drafted</span>
               <span class="font-mono text-[10px] bg-amber-950/60 text-amber-300 border border-amber-500/20 px-2 py-0.5 rounded font-bold" id="col-count-drafted">0</span>
@@ -293,7 +294,7 @@
           </div>
 
           <!-- Column 3: Applied -->
-          <div id="kanban-wrap-applied" class="w-full bg-slate-900/70 rounded-2xl p-3 border border-slate-800/80 flex flex-col shadow-sm">
+          <div id="kanban-wrap-applied" class="w-full bg-slate-900/70 rounded-2xl p-3 border border-slate-800/80 flex lg:!flex flex-col shadow-sm">
             <div class="flex items-center justify-between pb-2.5 border-b border-slate-800 text-xs font-semibold text-blue-400">
               <span class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-blue-400"></span> Applied</span>
               <span class="font-mono text-[10px] bg-blue-950/60 text-blue-300 border border-blue-500/20 px-2 py-0.5 rounded font-bold" id="col-count-applied">0</span>
@@ -302,7 +303,7 @@
           </div>
 
           <!-- Column 4: Interview -->
-          <div id="kanban-wrap-interview" class="w-full bg-slate-900/70 rounded-2xl p-3 border border-slate-800/80 flex flex-col shadow-sm">
+          <div id="kanban-wrap-interview" class="w-full bg-slate-900/70 rounded-2xl p-3 border border-slate-800/80 flex lg:!flex flex-col shadow-sm">
             <div class="flex items-center justify-between pb-2.5 border-b border-slate-800 text-xs font-semibold text-purple-400">
               <span class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-purple-400"></span> Interview</span>
               <span class="font-mono text-[10px] bg-purple-950/60 text-purple-300 border border-purple-500/20 px-2 py-0.5 rounded font-bold" id="col-count-interview">0</span>
@@ -311,7 +312,7 @@
           </div>
 
           <!-- Column 5: Offer / Hired -->
-          <div id="kanban-wrap-offer" class="w-full bg-slate-900/70 rounded-2xl p-3 border border-slate-800/80 flex flex-col shadow-sm">
+          <div id="kanban-wrap-offer" class="w-full bg-slate-900/70 rounded-2xl p-3 border border-slate-800/80 flex lg:!flex flex-col shadow-sm">
             <div class="flex items-center justify-between pb-2.5 border-b border-slate-800 text-xs font-semibold text-emerald-400">
               <span class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-emerald-400"></span> Offer</span>
               <span class="font-mono text-[10px] bg-emerald-950/60 text-emerald-300 border border-emerald-500/20 px-2 py-0.5 rounded font-bold" id="col-count-offer">0</span>

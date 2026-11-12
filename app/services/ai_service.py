@@ -30,7 +30,7 @@ class AIService:
                 }
             }
             headers = {"Content-Type": "application/json"}
-            resp = requests.post(url, headers=headers, json=payload, timeout=45)
+            resp = requests.post(url, headers=headers, json=payload, timeout=15)
             if resp.status_code == 200:
                 data = resp.json()
                 candidates = data.get("candidates", [])
@@ -39,6 +39,8 @@ class AIService:
                     if parts:
                         return parts[0].get("text", "")
             last_err = f"Gemini API error ({resp.status_code}): {resp.text[:300]}"
+            if resp.status_code in (400, 401, 403):
+                break
         raise Exception(last_err or "Gemini API failed")
 
     @staticmethod
