@@ -128,6 +128,9 @@
         <button onclick="switchTab('prep')" id="nav-prep" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800/60 transition">
           <i class="fa-solid fa-brain w-4 text-center text-purple-400"></i> Interview Prep & Grill
         </button>
+        <button onclick="switchTab('ai-search')" id="nav-ai-search" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800/60 transition">
+          <i class="fa-solid fa-sparkles w-4 text-center text-amber-400"></i> AI Search & Intel Agent
+        </button>
         <div class="pt-2 pb-1 px-2 text-[10px] font-mono uppercase tracking-wider text-slate-500">Tools & Workspace</div>
         <button onclick="switchTab('salary')" id="nav-salary" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800/60 transition">
           <i class="fa-solid fa-calculator w-4 text-center text-emerald-400"></i> Salary & ESOPs
@@ -272,52 +275,52 @@
           <button onclick="setMobileKanbanStage('offer')" id="mstage-offer" class="px-3 py-1.5 rounded-full bg-slate-900 text-emerald-300 border border-slate-800 text-[11px] font-medium shrink-0 transition">Offer</button>
         </div>
 
-        <!-- Compact, Scrollable 5-Column Kanban Board -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5 w-full items-start">
+        <!-- Compact, Scrollable 5-Column Kanban Board with Fixed Uniform Column Heights -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5 w-full items-stretch">
           
           <!-- Column 1: Discovered -->
-          <div id="kanban-wrap-discovered" class="w-full bg-slate-900/70 rounded-2xl p-3 border border-slate-800/80 flex lg:!flex flex-col shadow-sm">
-            <div class="flex items-center justify-between pb-2.5 border-b border-slate-800 text-xs font-semibold text-slate-300">
+          <div id="kanban-wrap-discovered" class="w-full bg-slate-900/70 rounded-2xl p-3 border border-slate-800/80 flex lg:!flex flex-col shadow-sm h-[520px]">
+            <div class="flex items-center justify-between pb-2.5 border-b border-slate-800 text-xs font-semibold text-slate-300 shrink-0">
               <span class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-slate-400"></span> Discovered</span>
               <span class="font-mono text-[10px] bg-slate-800 px-2 py-0.5 rounded text-slate-300 font-bold" id="col-count-discovered">0</span>
             </div>
-            <div class="mt-2.5 space-y-2.5 min-h-[130px] max-h-[460px] overflow-y-auto custom-scroll pr-1" id="col-discovered"></div>
+            <div class="mt-2.5 space-y-2.5 flex-1 overflow-y-auto custom-scroll pr-1" id="col-discovered"></div>
           </div>
 
           <!-- Column 2: Drafted -->
-          <div id="kanban-wrap-drafted" class="w-full bg-slate-900/70 rounded-2xl p-3 border border-slate-800/80 flex lg:!flex flex-col shadow-sm">
-            <div class="flex items-center justify-between pb-2.5 border-b border-slate-800 text-xs font-semibold text-amber-400">
+          <div id="kanban-wrap-drafted" class="w-full bg-slate-900/70 rounded-2xl p-3 border border-slate-800/80 flex lg:!flex flex-col shadow-sm h-[520px]">
+            <div class="flex items-center justify-between pb-2.5 border-b border-slate-800 text-xs font-semibold text-amber-400 shrink-0">
               <span class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-amber-400"></span> Tailored / Drafted</span>
               <span class="font-mono text-[10px] bg-amber-950/60 text-amber-300 border border-amber-500/20 px-2 py-0.5 rounded font-bold" id="col-count-drafted">0</span>
             </div>
-            <div class="mt-2.5 space-y-2.5 min-h-[130px] max-h-[460px] overflow-y-auto custom-scroll pr-1" id="col-drafted"></div>
+            <div class="mt-2.5 space-y-2.5 flex-1 overflow-y-auto custom-scroll pr-1" id="col-drafted"></div>
           </div>
 
           <!-- Column 3: Applied -->
-          <div id="kanban-wrap-applied" class="w-full bg-slate-900/70 rounded-2xl p-3 border border-slate-800/80 flex lg:!flex flex-col shadow-sm">
-            <div class="flex items-center justify-between pb-2.5 border-b border-slate-800 text-xs font-semibold text-blue-400">
+          <div id="kanban-wrap-applied" class="w-full bg-slate-900/70 rounded-2xl p-3 border border-slate-800/80 flex lg:!flex flex-col shadow-sm h-[520px]">
+            <div class="flex items-center justify-between pb-2.5 border-b border-slate-800 text-xs font-semibold text-blue-400 shrink-0">
               <span class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-blue-400"></span> Applied</span>
               <span class="font-mono text-[10px] bg-blue-950/60 text-blue-300 border border-blue-500/20 px-2 py-0.5 rounded font-bold" id="col-count-applied">0</span>
             </div>
-            <div class="mt-2.5 space-y-2.5 min-h-[130px] max-h-[460px] overflow-y-auto custom-scroll pr-1" id="col-applied"></div>
+            <div class="mt-2.5 space-y-2.5 flex-1 overflow-y-auto custom-scroll pr-1" id="col-applied"></div>
           </div>
 
           <!-- Column 4: Interview -->
-          <div id="kanban-wrap-interview" class="w-full bg-slate-900/70 rounded-2xl p-3 border border-slate-800/80 flex lg:!flex flex-col shadow-sm">
-            <div class="flex items-center justify-between pb-2.5 border-b border-slate-800 text-xs font-semibold text-purple-400">
+          <div id="kanban-wrap-interview" class="w-full bg-slate-900/70 rounded-2xl p-3 border border-slate-800/80 flex lg:!flex flex-col shadow-sm h-[520px]">
+            <div class="flex items-center justify-between pb-2.5 border-b border-slate-800 text-xs font-semibold text-purple-400 shrink-0">
               <span class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-purple-400"></span> Interview</span>
               <span class="font-mono text-[10px] bg-purple-950/60 text-purple-300 border border-purple-500/20 px-2 py-0.5 rounded font-bold" id="col-count-interview">0</span>
             </div>
-            <div class="mt-2.5 space-y-2.5 min-h-[130px] max-h-[460px] overflow-y-auto custom-scroll pr-1" id="col-interview"></div>
+            <div class="mt-2.5 space-y-2.5 flex-1 overflow-y-auto custom-scroll pr-1" id="col-interview"></div>
           </div>
 
           <!-- Column 5: Offer / Hired -->
-          <div id="kanban-wrap-offer" class="w-full bg-slate-900/70 rounded-2xl p-3 border border-slate-800/80 flex lg:!flex flex-col shadow-sm">
-            <div class="flex items-center justify-between pb-2.5 border-b border-slate-800 text-xs font-semibold text-emerald-400">
+          <div id="kanban-wrap-offer" class="w-full bg-slate-900/70 rounded-2xl p-3 border border-slate-800/80 flex lg:!flex flex-col shadow-sm h-[520px]">
+            <div class="flex items-center justify-between pb-2.5 border-b border-slate-800 text-xs font-semibold text-emerald-400 shrink-0">
               <span class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-emerald-400"></span> Offer</span>
               <span class="font-mono text-[10px] bg-emerald-950/60 text-emerald-300 border border-emerald-500/20 px-2 py-0.5 rounded font-bold" id="col-count-offer">0</span>
             </div>
-            <div class="mt-2.5 space-y-2.5 min-h-[130px] max-h-[460px] overflow-y-auto custom-scroll pr-1" id="col-offer"></div>
+            <div class="mt-2.5 space-y-2.5 flex-1 overflow-y-auto custom-scroll pr-1" id="col-offer"></div>
           </div>
 
         </div>
@@ -707,6 +710,15 @@
             </div>
 
             <div>
+              <label class="block text-[11px] font-mono text-slate-400 mb-1">Direct Form / Source</label>
+              <select id="radar-filter-source" onchange="applyRadarFilters()" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-emerald-400 font-medium focus:outline-none focus:border-blue-500">
+                <option value="all">All Sources</option>
+                <option value="direct_ats">🟢 Live ATS Direct Forms</option>
+                <option value="portal">🔵 Careers Portals</option>
+              </select>
+            </div>
+
+            <div>
               <label class="block text-[11px] font-mono text-slate-400 mb-1">Company Type</label>
               <select id="radar-filter-company" onchange="applyRadarFilters()" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-amber-400 font-medium focus:outline-none focus:border-blue-500">
                 <option value="all">All Companies</option>
@@ -738,20 +750,10 @@
             </div>
 
             <div>
-              <label class="block text-[11px] font-mono text-slate-400 mb-1">Role Domain</label>
-              <select id="radar-filter-role" onchange="applyRadarFilters()" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500">
-                <option value="all">All Domains</option>
-                <option value="backend">Backend & APIs</option>
-                <option value="fullstack">Full Stack</option>
-                <option value="sde2">SDE-2 / Mid (2-5 yrs)</option>
-                <option value="sde1">SDE-1 / Junior</option>
-              </select>
-            </div>
-
-            <div>
-              <label class="block text-[11px] font-mono text-slate-400 mb-1">Sort By</label>
+              <label class="block text-[11px] font-mono text-slate-400 mb-1">Sort & Rank</label>
               <select id="radar-filter-sort" onchange="applyRadarFilters()" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500">
                 <option value="score">Highest Match Score</option>
+                <option value="direct">Direct Apply Forms First</option>
                 <option value="company">Company Name (A-Z)</option>
               </select>
             </div>
@@ -760,6 +762,22 @@
 
         <!-- Job Cards Grid -->
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="radar-jobs-grid"></div>
+
+        <!-- Radar Pagination Controls -->
+        <div id="radar-pagination-wrap" class="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 pb-6 border-t border-slate-800 text-xs">
+          <div class="text-slate-400 font-mono" id="radar-page-info">Showing jobs 1-24 of 0</div>
+          <div class="flex items-center gap-2">
+            <button onclick="changeRadarPage(-1)" id="btn-radar-prev" class="px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold transition flex items-center gap-1.5">
+              <i class="fa-solid fa-chevron-left text-[10px]"></i> Previous
+            </button>
+            <span class="px-3 py-1 rounded-xl bg-slate-900 border border-slate-800 font-mono text-slate-300 font-bold" id="radar-cur-page-pill">
+              Page 1 / 1
+            </span>
+            <button onclick="changeRadarPage(1)" id="btn-radar-next" class="px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold transition flex items-center gap-1.5">
+              Next <i class="fa-solid fa-chevron-right text-[10px]"></i>
+            </button>
+          </div>
+        </div>
       </div>
 
       <!-- ========================================== -->
@@ -1104,7 +1122,96 @@ Performance Metrics:
       </div>
 
       <!-- ========================================== -->
-      <!-- TAB 5: SALARY & ESOP CALCULATOR            -->
+      <!-- TAB 4B: UNIVERSAL AI RESEARCH AGENT        -->
+      <!-- ========================================== -->
+      <div id="tab-ai-search" class="space-y-6 hidden">
+        <div class="max-w-5xl mx-auto space-y-6">
+          
+          <!-- Hero Search Box (Perplexity / Grok style) -->
+          <div class="glass-card rounded-2xl p-6 sm:p-8 border border-amber-500/30 bg-gradient-to-br from-amber-950/20 via-slate-900/80 to-purple-950/20 shadow-2xl space-y-5">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <span class="w-10 h-10 rounded-2xl bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center text-lg shadow-md shadow-amber-500/20">
+                  <i class="fa-solid fa-sparkles"></i>
+                </span>
+                <div>
+                  <h3 class="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+                    CareerOS AI Research & Intelligence Agent
+                    <span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">Gemini & Groq Powered</span>
+                  </h3>
+                  <p class="text-xs text-slate-400">Ask anything: company tech stack, interview patterns, system design trade-offs, or code solutions</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Mode Selector Pills -->
+            <div class="flex flex-wrap items-center gap-2 pt-1">
+              <button onclick="setAiSearchMode('general')" id="aimode-general" class="px-3 py-1.5 rounded-xl bg-blue-600 text-white text-xs font-semibold transition flex items-center gap-1.5">
+                <i class="fa-solid fa-globe"></i> Universal Search
+              </button>
+              <button onclick="setAiSearchMode('company')" id="aimode-company" class="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 text-xs font-medium transition flex items-center gap-1.5">
+                <i class="fa-solid fa-building"></i> Company Intel & Rounds
+              </button>
+              <button onclick="setAiSearchMode('concept')" id="aimode-concept" class="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 text-xs font-medium transition flex items-center gap-1.5">
+                <i class="fa-solid fa-brain"></i> System Design & CS
+              </button>
+              <button onclick="setAiSearchMode('interview')" id="aimode-interview" class="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 text-xs font-medium transition flex items-center gap-1.5">
+                <i class="fa-solid fa-comments"></i> Interview Coaching
+              </button>
+              <button onclick="setAiSearchMode('salary')" id="aimode-salary" class="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 text-xs font-medium transition flex items-center gap-1.5">
+                <i class="fa-solid fa-money-bill-wave"></i> Salary & Negotiation
+              </button>
+            </div>
+
+            <!-- Search Input Box -->
+            <div class="relative">
+              <textarea id="ai-search-input" rows="3" placeholder="Ask anything... (e.g. 'What is Zepto\'s backend interview pattern for SDE-2?', 'Design a low-latency URL shortener in C++ and Node.js', 'Explain distributed locking via Redis SETNX with edge cases')" class="w-full bg-slate-950 border border-slate-800 rounded-2xl p-4 pr-28 text-xs sm:text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 custom-scroll transition"></textarea>
+              <button onclick="executeAiSearch()" id="btn-ai-search" class="absolute right-3 bottom-4 px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 shadow-lg shadow-amber-500/25 transition">
+                <span>Ask AI</span> <i class="fa-solid fa-arrow-up text-xs"></i>
+              </button>
+            </div>
+
+            <!-- Fast Click Inspiration Chips -->
+            <div class="flex flex-wrap items-center gap-2 pt-1 text-[11px]">
+              <span class="text-slate-500 font-mono">Suggested:</span>
+              <button onclick="fillAiSearchPrompt('What are the exact interview rounds and backend tech stack for SDE-2 at Swiggy & Zepto?')" class="px-2.5 py-1 rounded-lg bg-slate-950/80 hover:bg-slate-800 text-slate-300 border border-slate-800 transition">
+                Swiggy / Zepto SDE-2 Rounds
+              </button>
+              <button onclick="fillAiSearchPrompt('How to implement an Idempotent Payment Switch handling duplicate webhooks in Node.js and PostgreSQL?')" class="px-2.5 py-1 rounded-lg bg-slate-950/80 hover:bg-slate-800 text-slate-300 border border-slate-800 transition">
+                Idempotent Payment Webhooks
+              </button>
+              <button onclick="fillAiSearchPrompt('Top 10 Redis caching questions asked at Razorpay with code examples and cache invalidation gotchas')" class="px-2.5 py-1 rounded-lg bg-slate-950/80 hover:bg-slate-800 text-slate-300 border border-slate-800 transition">
+                Razorpay Redis Interview Qs
+              </button>
+              <button onclick="fillAiSearchPrompt('Word-for-word counter-offer salary negotiation script for 28L CTC offer at an Indian unicorn')" class="px-2.5 py-1 rounded-lg bg-slate-950/80 hover:bg-slate-800 text-slate-300 border border-slate-800 transition">
+                Salary Counter-Offer Script
+              </button>
+            </div>
+          </div>
+
+          <!-- Search Results Stream Card -->
+          <div id="ai-search-results-card" class="hidden glass-card rounded-2xl p-6 sm:p-7 border border-slate-800 space-y-4">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+              <div class="flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span class="text-xs font-mono font-bold text-white uppercase tracking-wider" id="ai-search-provider-pill">CareerOS Intel</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <button onclick="copyAiSearchResult()" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold flex items-center gap-1.5 transition">
+                  <i class="fa-regular fa-copy"></i> Copy Answer
+                </button>
+                <button onclick="saveAiSearchResultToVault()" class="px-3 py-1.5 rounded-xl bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/30 text-xs font-semibold flex items-center gap-1.5 transition">
+                  <i class="fa-solid fa-bookmark"></i> Save to Notes
+                </button>
+              </div>
+            </div>
+
+            <!-- Rendered Output Area -->
+            <div id="ai-search-output" class="text-xs sm:text-sm text-slate-200 leading-relaxed font-sans space-y-3 whitespace-pre-wrap selection:bg-amber-500/30"></div>
+          </div>
+
+        </div>
+      </div>
       <!-- ========================================== -->
       <div id="tab-salary" class="space-y-6 hidden">
         <div class="max-w-4xl mx-auto space-y-6">
@@ -1454,8 +1561,11 @@ Performance Metrics:
           <h3 class="text-sm sm:text-base font-bold text-white truncate mt-1" id="dsa-m-title">Problem Title</h3>
         </div>
         <div class="flex items-center gap-2 shrink-0">
-          <a id="dsa-m-lc" href="#" target="_blank" class="px-3 py-1.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 text-xs font-semibold flex items-center gap-1.5 transition">
+          <a id="dsa-m-lc" href="#" target="_blank" class="px-2.5 sm:px-3 py-1.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 text-xs font-semibold flex items-center gap-1.5 transition">
             LeetCode <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+          </a>
+          <a id="dsa-m-gfg" href="#" target="_blank" class="px-2.5 sm:px-3 py-1.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 text-xs font-semibold flex items-center gap-1.5 transition">
+            GFG <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
           </a>
           <button onclick="closeDsaModal()" class="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800"><i class="fa-solid fa-xmark"></i></button>
         </div>
@@ -1472,24 +1582,54 @@ Performance Metrics:
           </div>
         </div>
 
-        <!-- Recognition Trick & Intuition -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div class="bg-amber-950/20 border border-amber-500/30 rounded-xl p-3.5 space-y-1">
-            <span class="text-[10px] font-mono uppercase text-amber-400 font-bold flex items-center gap-1.5">
-              <i class="fa-solid fa-lightbulb"></i> 30-Second Pattern Trick
-            </span>
-            <p id="dsa-m-trick" class="text-xs text-slate-200 leading-relaxed"></p>
+        <!-- Progressive 3-Tier Hint System (Answers are NOT shown directly) -->
+        <div class="space-y-2.5">
+          <div class="text-[11px] font-mono uppercase text-slate-400 font-bold flex items-center justify-between">
+            <span><i class="fa-solid fa-lightbulb text-amber-400 mr-1.5"></i> Progressive Hints (Active Interview Practice)</span>
+            <span class="text-[10px] text-slate-500">Click to expand hints step-by-step</span>
           </div>
-          <div class="bg-blue-950/20 border border-blue-500/30 rounded-xl p-3.5 space-y-1">
-            <span class="text-[10px] font-mono uppercase text-blue-400 font-bold flex items-center gap-1.5">
-              <i class="fa-solid fa-stairs"></i> Brute &rarr; Optimal Intuition
-            </span>
-            <p id="dsa-m-intuition" class="text-xs text-slate-200 leading-relaxed"></p>
-          </div>
+
+          <!-- Hint 1 -->
+          <details class="bg-slate-950 p-3 rounded-xl border border-slate-800/80 group">
+            <summary class="text-xs font-semibold text-amber-300 cursor-pointer list-none flex items-center justify-between">
+              <span class="flex items-center gap-2"><i class="fa-solid fa-key text-[10px]"></i> Hint 1: 30-Second Pattern Recognition Trick</span>
+              <i class="fa-solid fa-chevron-down text-slate-500 text-[10px] group-open:rotate-180 transition"></i>
+            </summary>
+            <p id="dsa-m-trick" class="text-xs text-slate-300 mt-2.5 pt-2 border-t border-slate-800/70 leading-relaxed"></p>
+          </details>
+
+          <!-- Hint 2 -->
+          <details class="bg-slate-950 p-3 rounded-xl border border-slate-800/80 group">
+            <summary class="text-xs font-semibold text-blue-300 cursor-pointer list-none flex items-center justify-between">
+              <span class="flex items-center gap-2"><i class="fa-solid fa-stairs text-[10px]"></i> Hint 2: Brute Force &rarr; Optimal Data Structure Approach</span>
+              <i class="fa-solid fa-chevron-down text-slate-500 text-[10px] group-open:rotate-180 transition"></i>
+            </summary>
+            <p id="dsa-m-intuition" class="text-xs text-slate-300 mt-2.5 pt-2 border-t border-slate-800/70 leading-relaxed"></p>
+          </details>
+
+          <!-- Hint 3 -->
+          <details class="bg-slate-950 p-3 rounded-xl border border-slate-800/80 group">
+            <summary class="text-xs font-semibold text-purple-300 cursor-pointer list-none flex items-center justify-between">
+              <span class="flex items-center gap-2"><i class="fa-solid fa-triangle-exclamation text-[10px]"></i> Hint 3: Complexity & Edge Cases</span>
+              <i class="fa-solid fa-chevron-down text-slate-500 text-[10px] group-open:rotate-180 transition"></i>
+            </summary>
+            <div class="text-xs text-slate-300 mt-2.5 pt-2 border-t border-slate-800/70 space-y-1">
+              <p><strong class="text-emerald-400 font-mono">Target Complexity:</strong> <span id="dsa-m-complexity-text"></span></p>
+              <p class="text-slate-400 text-[11px]">Watch out for: empty array, single element, negative numbers, duplicates, and integer overflow constraints.</p>
+            </div>
+          </details>
         </div>
 
-        <!-- Python / C++ Solution Tabs -->
-        <div class="bg-slate-950 border border-slate-800 rounded-xl overflow-hidden">
+        <!-- Explicit Reveal Solution Button -->
+        <div>
+          <button id="btn-toggle-dsa-sol" onclick="toggleDsaSolution()" class="w-full py-2.5 px-4 rounded-xl bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/40 text-blue-300 text-xs font-bold flex items-center justify-center gap-2 transition">
+            <i class="fa-solid fa-eye" id="icon-dsa-sol"></i>
+            <span id="text-dsa-sol">Reveal Solution & Code (Python 3 & C++17)</span>
+          </button>
+        </div>
+
+        <!-- Python / C++ Solution Tabs (Hidden until user clicks Reveal) -->
+        <div id="dsa-solution-container" class="hidden bg-slate-950 border border-slate-800 rounded-xl overflow-hidden">
           <div class="flex items-center justify-between px-3 py-2 border-b border-slate-800 bg-slate-900/80">
             <div class="flex items-center gap-1.5">
               <button onclick="switchDsaLang('python')" id="dsa-lang-py" class="px-3 py-1 rounded-lg bg-cyan-600 text-white text-xs font-semibold transition">Python 3</button>

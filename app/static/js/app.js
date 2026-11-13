@@ -36,7 +36,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 // --- Tab Navigation ---
 function switchTab(tabId) {
   currentTab = tabId;
-  const tabs = ['pipeline', 'tailor', 'radar', 'dsa', 'sysdesign', 'corecs', 'prep', 'salary', 'vault', 'profile', 'settings'];
+  const tabs = ['pipeline', 'tailor', 'radar', 'dsa', 'sysdesign', 'corecs', 'prep', 'ai-search', 'salary', 'vault', 'profile', 'settings'];
   tabs.forEach(t => {
     const el = document.getElementById(`tab-${t}`);
     const navBtn = document.getElementById(`nav-${t}`);
@@ -305,9 +305,10 @@ async function loadApplications() {
       const colEl = cols[k];
       if (colEl && counts[k] === 0) {
         colEl.innerHTML = `
-          <div class="h-24 border-2 border-dashed border-slate-800/80 rounded-xl flex flex-col items-center justify-center p-3 text-center select-none">
-            <i class="fa-regular fa-folder-open text-slate-700 text-base mb-1"></i>
-            <span class="text-[11px] text-slate-500 font-medium">No roles here</span>
+          <div class="h-36 border-2 border-dashed border-slate-800/80 rounded-xl flex flex-col items-center justify-center p-4 text-center select-none my-auto">
+            <i class="fa-regular fa-folder-open text-slate-700 text-lg mb-1.5"></i>
+            <span class="text-[11px] text-slate-500 font-medium">No roles in this stage</span>
+            <span class="text-[10px] text-slate-600 mt-0.5">Move or add jobs here</span>
           </div>
         `;
       }
@@ -510,20 +511,22 @@ function downloadResumePdf() {
   exportDiv.id = 'pdf-export-active-resume';
   exportDiv.innerHTML = container.innerHTML;
   exportDiv.style.position = 'fixed';
-  exportDiv.style.left = '-9999px';
+  exportDiv.style.left = '0';
   exportDiv.style.top = '0';
   exportDiv.style.width = '794px'; // 210mm in pixels at 96 DPI
   exportDiv.style.padding = '32px 36px';
   exportDiv.style.background = '#ffffff';
   exportDiv.style.color = '#0f172a';
   exportDiv.style.zIndex = '-9999';
+  exportDiv.style.opacity = '1';
+  exportDiv.style.pointerEvents = 'none';
   document.body.appendChild(exportDiv);
 
   const opt = {
     margin: [0, 0, 0, 0],
     filename: filename,
     image: { type: 'jpeg', quality: 0.98 },
-    html2canvas: { scale: 2, useCORS: true, letterRendering: true, scrollY: 0 },
+    html2canvas: { scale: 2, useCORS: true, letterRendering: true, scrollY: 0, backgroundColor: '#ffffff' },
     jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
     pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
   };
@@ -618,15 +621,42 @@ function downloadActiveDoc(ext) {
   showToast(`Downloaded .${ext} file!`);
 }
 
-// --- Job Radar (100+ Jobs) ---
+// --- Job Radar (Multi-ATS + Sniper + Pagination) ---
+let radarCurrentPage = 1;
+const radarPageSize = 24;
+let currentFilteredRadarJobs = [];
+
+function launchLinkedInSniper() {
+  const role = document.getElementById('sniper-role')?.value || 'Backend Engineer';
+  const loc = document.getElementById('sniper-loc')?.value || 'Bengaluru';
+  const time = document.getElementById('sniper-time')?.value || 'r86400';
+  const easy = document.getElementById('sniper-easy-apply')?.checked ?? true;
+  const under10 = (document.getElementById('sniper-under-10')?.checked || document.getElementById('sniper-early')?.checked) ?? true;
+
+  let url = `https://www.linkedin.com/jobs/search/?keywords=${encodeURIComponent(role)}&location=${encodeURIComponent(loc)}`;
+  if (time && time !== 'all') {
+    url += `&f_TPR=${time}`;
+  }
+  if (easy) {
+    url += '&f_LF=f_AL';
+  }
+  if (under10) {
+    url += '&f_EA=true';
+  }
+  window.open(url, '_blank');
+  showToast(`Launched LinkedIn Live Sniper for ${role}!`);
+}
+
 async function loadRadarJobs() {
   const grid = document.getElementById('radar-jobs-grid');
-  grid.innerHTML = '<div class="col-span-1 md:col-span-3 text-center py-16 text-xs font-mono text-slate-400"><i class="fa-solid fa-spinner animate-spin text-emerald-400 text-xl mb-2 block"></i> Scanning live developer feeds and verified Indian tech hubs...</div>';
+  grid.innerHTML = '<div class="col-span-1 md:col-span-3 text-center py-16 text-xs font-mono text-slate-400"><i class="fa-solid fa-spinner animate-spin text-emerald-400 text-xl mb-2 block"></i> Scanning live Greenhouse, Ashby & Lever ATS endpoints + verified tech hubs...</div>';
 
   try {
-    const res = await fetch('/api/radar/jobs?query=all&limit=150');
+    const res = await fetch('/api/radar/jobs?query=all&limit=250');
     if (!res.ok) throw new Error();
-    allRadarJobs = await res.json();
+    const data = await res.json();
+    allRadarJobs = Array.isArray(data) ? data : (data.jobs || []);
+    radarCurrentPage = 1;
     applyRadarFilters();
   } catch (e) {
     grid.innerHTML = '<div class="col-span-1 md:col-span-3 text-center py-12 text-xs text-rose-400">Error loading radar jobs.</div>';
@@ -634,14 +664,21 @@ async function loadRadarJobs() {
 }
 
 function applyRadarFilters() {
-  const query = (document.getElementById('radar-search').value || '').trim().toLowerCase();
+  const query = (document.getElementById('radar-search')?.value || '').trim().toLowerCase();
+  const sourceFilter = (document.getElementById('radar-filter-source')?.value || 'all').toLowerCase();
   const compType = (document.getElementById('radar-filter-company')?.value || 'all').toLowerCase();
   const salRange = (document.getElementById('radar-filter-salary')?.value || 'all').toLowerCase();
   const loc = (document.getElementById('radar-filter-loc')?.value || 'all').toLowerCase();
   const role = (document.getElementById('radar-filter-role')?.value || 'all').toLowerCase();
   const sort = document.getElementById('radar-filter-sort')?.value || 'score';
 
-  let filtered = allRadarJobs.filter(j => {
+  currentFilteredRadarJobs = allRadarJobs.filter(j => {
+    // Direct ATS vs Portal source filter
+    if (sourceFilter !== 'all') {
+      if (sourceFilter === 'direct_ats' && !j.is_direct) return false;
+      if (sourceFilter === 'portal' && j.is_direct) return false;
+    }
+
     // Search query
     if (query) {
       const match = `${j.title} ${j.company} ${j.location} ${(j.tags || []).join(' ')}`.toLowerCase();
@@ -661,7 +698,7 @@ function applyRadarFilters() {
     // Location
     if (loc !== 'all') {
       const jLoc = (j.location || '').toLowerCase();
-      if (loc === 'bengaluru' && !jLoc.includes('bengaluru')) return false;
+      if (loc === 'bengaluru' && !jLoc.includes('bengaluru') && !jLoc.includes('bangalore')) return false;
       if (loc === 'delhi_ncr' && (!jLoc.includes('noida') && !jLoc.includes('gurgaon') && !jLoc.includes('delhi'))) return false;
       if (loc === 'remote_india' && (!jLoc.includes('remote') || jLoc.includes('global') || jLoc.includes('worldwide'))) return false;
       if (loc === 'global_remote' && (!jLoc.includes('worldwide') && !jLoc.includes('global') && !jLoc.includes('$'))) return false;
@@ -681,16 +718,55 @@ function applyRadarFilters() {
 
   // Sort
   if (sort === 'score') {
-    filtered.sort((a, b) => (b.match_score || 0) - (a.match_score || 0));
+    currentFilteredRadarJobs.sort((a, b) => (b.match_score || 0) - (a.match_score || 0));
+  } else if (sort === 'direct') {
+    currentFilteredRadarJobs.sort((a, b) => (b.is_direct ? 1 : 0) - (a.is_direct ? 1 : 0) || (b.match_score || 0) - (a.match_score || 0));
   } else if (sort === 'company') {
-    filtered.sort((a, b) => (a.company || '').localeCompare(b.company || ''));
+    currentFilteredRadarJobs.sort((a, b) => (a.company || '').localeCompare(b.company || ''));
   }
 
   // Update badge count
   const countBadge = document.getElementById('radar-count-badge');
-  if (countBadge) countBadge.innerText = `${filtered.length} Active Jobs`;
+  if (countBadge) countBadge.innerText = `${currentFilteredRadarJobs.length} Active Jobs`;
 
-  renderRadarGrid(filtered);
+  renderRadarPaginated();
+}
+
+function changeRadarPage(delta) {
+  const totalPages = Math.max(1, Math.ceil(currentFilteredRadarJobs.length / radarPageSize));
+  const newPage = radarCurrentPage + delta;
+  if (newPage >= 1 && newPage <= totalPages) {
+    radarCurrentPage = newPage;
+    renderRadarPaginated();
+    const grid = document.getElementById('radar-jobs-grid');
+    if (grid) grid.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+}
+
+function renderRadarPaginated() {
+  const total = currentFilteredRadarJobs.length;
+  const totalPages = Math.max(1, Math.ceil(total / radarPageSize));
+  if (radarCurrentPage > totalPages) radarCurrentPage = totalPages;
+  if (radarCurrentPage < 1) radarCurrentPage = 1;
+
+  const start = (radarCurrentPage - 1) * radarPageSize;
+  const pageSlice = currentFilteredRadarJobs.slice(start, start + radarPageSize);
+
+  // Update pagination info
+  const infoEl = document.getElementById('radar-page-info');
+  if (infoEl) {
+    infoEl.innerText = total === 0 ? 'Showing 0 jobs' : `Showing jobs ${start + 1}-${Math.min(start + radarPageSize, total)} of ${total} verified`;
+  }
+  const pillEl = document.getElementById('radar-cur-page-pill');
+  if (pillEl) {
+    pillEl.innerText = `Page ${radarCurrentPage} / ${totalPages}`;
+  }
+  const btnPrev = document.getElementById('btn-radar-prev');
+  if (btnPrev) btnPrev.disabled = (radarCurrentPage <= 1);
+  const btnNext = document.getElementById('btn-radar-next');
+  if (btnNext) btnNext.disabled = (radarCurrentPage >= totalPages);
+
+  renderRadarGrid(pageSlice);
 }
 
 function renderRadarGrid(jobs) {
@@ -713,6 +789,10 @@ function renderRadarGrid(jobs) {
                           (job.company_type === 'mnc' ? '<span class="text-[9px] font-mono px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-300 border border-blue-500/20 font-bold uppercase">Tier-1 MNC</span>' :
                           '<span class="text-[9px] font-mono px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-300 border border-purple-500/20 font-bold uppercase">Cloud/DevTools</span>');
 
+    const sourceBadge = job.is_direct
+      ? '<span class="text-[9px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold flex items-center gap-1 shrink-0"><i class="fa-solid fa-bolt text-emerald-400"></i> Direct ATS Form</span>'
+      : '<span class="text-[9px] font-mono px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-300 border border-blue-500/30 font-medium shrink-0">Official Portal</span>';
+
     const jobUrl = job.url || `https://www.google.com/search?q=${encodeURIComponent(job.company + ' careers')}`;
 
     card.innerHTML = `
@@ -722,7 +802,7 @@ function renderRadarGrid(jobs) {
             <span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-bold">${job.match_score}% Match</span>
             ${compTypeBadge}
           </div>
-          <span class="text-[10px] font-mono text-slate-400 bg-slate-900 px-2 py-0.5 rounded border border-slate-800">${job.source}</span>
+          ${sourceBadge}
         </div>
         <a href="${jobUrl}" target="_blank" class="block group" title="Open official job posting">
           <h4 class="text-sm font-bold text-white group-hover:text-blue-400 mb-1 leading-snug transition flex items-center justify-between">
@@ -740,8 +820,8 @@ function renderRadarGrid(jobs) {
       <div class="pt-3 border-t border-slate-800 flex items-center justify-between gap-2">
         <span class="text-[10px] font-mono text-emerald-400 font-semibold">${job.salary || 'Competitive'}</span>
         <div class="flex items-center gap-1.5">
-          <a href="${jobUrl}" target="_blank" class="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-[11px] font-medium transition flex items-center gap-1.5" title="Direct to Official Portal">
-            <i class="fa-solid fa-arrow-up-right-from-square text-emerald-400"></i> Direct Apply
+          <a href="${jobUrl}" target="_blank" class="px-2.5 py-1.5 rounded-xl ${job.is_direct ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm' : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700'} text-[11px] font-semibold transition flex items-center gap-1.5" title="${job.is_direct ? 'Direct to Official ATS Submission Form' : 'Direct to Official Career Portal'}">
+            ${job.is_direct ? '<i class="fa-solid fa-bolt text-amber-300"></i> 1-Click Form' : '<i class="fa-solid fa-arrow-up-right-from-square text-sky-400"></i> Portal'}
           </a>
           <button onclick="tailorFromRadarById('${encodeURIComponent(String(job.id))}')" class="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-semibold transition flex items-center gap-1.5 shadow-sm">
             <i class="fa-solid fa-wand-magic-sparkles text-amber-300"></i> Tailor Pack
@@ -1015,13 +1095,15 @@ async function downloadDocPdf(docId) {
     exportDiv.id = 'pdf-export-vault-temp';
     exportDiv.innerHTML = resumeHtml;
     exportDiv.style.position = 'fixed';
-    exportDiv.style.left = '-9999px';
+    exportDiv.style.left = '0';
     exportDiv.style.top = '0';
     exportDiv.style.width = '794px'; // 210mm in pixels at 96 DPI
     exportDiv.style.padding = '32px 36px';
     exportDiv.style.background = '#ffffff';
     exportDiv.style.color = '#0f172a';
     exportDiv.style.zIndex = '-9999';
+    exportDiv.style.opacity = '1';
+    exportDiv.style.pointerEvents = 'none';
     document.body.appendChild(exportDiv);
 
     const filename = `Shreyash_Shukla_Resume_${(d.company || 'Role').replace(/[^a-zA-Z0-9_-]/g, '_')}.pdf`;
@@ -1032,7 +1114,7 @@ async function downloadDocPdf(docId) {
           margin: [0, 0, 0, 0],
           filename: filename,
           image: { type: 'jpeg', quality: 0.98 },
-          html2canvas: { scale: 2, useCORS: true, scrollY: 0 },
+          html2canvas: { scale: 2, useCORS: true, scrollY: 0, backgroundColor: '#ffffff' },
           jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
         }).from(exportDiv).save();
         showToast('PDF downloaded successfully!');
@@ -1773,16 +1855,47 @@ function openDsaModal(problemId) {
   document.getElementById('dsa-m-comp').innerText = p.complexity;
   document.getElementById('dsa-m-title').innerText = p.title;
   document.getElementById('dsa-m-pattern').innerText = p.pattern;
-  document.getElementById('dsa-m-lc').href = p.leetcode_url;
+  document.getElementById('dsa-m-lc').href = p.leetcode_url || `https://leetcode.com/problemset/all/?search=${encodeURIComponent(p.title)}`;
+  const gfgEl = document.getElementById('dsa-m-gfg');
+  if (gfgEl) {
+    gfgEl.href = p.gfg_url || `https://www.geeksforgeeks.org/explore?page=1&search=${encodeURIComponent(p.title)}`;
+  }
   document.getElementById('dsa-m-trick').innerText = p.trick;
   document.getElementById('dsa-m-intuition').innerText = p.intuition;
+  const compEl = document.getElementById('dsa-m-complexity-text');
+  if (compEl) compEl.innerText = p.complexity;
   document.getElementById('dsa-m-notes').value = p.notes || '';
   document.getElementById('dsa-ai-input').value = '';
   document.getElementById('dsa-ai-output').classList.add('hidden');
 
+  // Answers are NOT shown directly - collapse solution until explicitly revealed
+  const solContainer = document.getElementById('dsa-solution-container');
+  const txtToggle = document.getElementById('text-dsa-sol');
+  const iconToggle = document.getElementById('icon-dsa-sol');
+  if (solContainer) solContainer.classList.add('hidden');
+  if (txtToggle) txtToggle.innerText = 'Reveal Solution & Code (Python 3 & C++17)';
+  if (iconToggle) iconToggle.className = 'fa-solid fa-eye';
+
   highlightDsaStatusButtons(p.status);
   switchDsaLang(activeDsaLang);
   document.getElementById('dsa-study-modal').classList.remove('hidden');
+}
+
+function toggleDsaSolution() {
+  const solContainer = document.getElementById('dsa-solution-container');
+  const txtToggle = document.getElementById('text-dsa-sol');
+  const iconToggle = document.getElementById('icon-dsa-sol');
+  if (!solContainer) return;
+  const isHidden = solContainer.classList.contains('hidden');
+  if (isHidden) {
+    solContainer.classList.remove('hidden');
+    if (txtToggle) txtToggle.innerText = 'Hide Solution Code';
+    if (iconToggle) iconToggle.className = 'fa-solid fa-eye-slash';
+  } else {
+    solContainer.classList.add('hidden');
+    if (txtToggle) txtToggle.innerText = 'Reveal Solution & Code (Python 3 & C++17)';
+    if (iconToggle) iconToggle.className = 'fa-solid fa-eye';
+  }
 }
 
 function closeDsaModal() {
@@ -1896,6 +2009,7 @@ let sysDesignLoaded = false;
 let sdBlocks = [];
 let sdCases = [];
 let sdProgress = {};
+let sdNotes = {};
 let activeCaseStudy = null;
 let activeSdCodeLang = 'python';
 
@@ -1907,6 +2021,7 @@ async function loadSysDesignHub() {
     sdBlocks = data.building_blocks || [];
     sdCases = data.case_studies || [];
     sdProgress = data.progress || {};
+    sdNotes = data.notes || {};
     sysDesignLoaded = true;
 
     renderSdBlocks();
@@ -2033,6 +2148,19 @@ function selectCaseStudy(caseId) {
       </div>
     ` : ''}
 
+    <!-- Personal Engineering & Interview Notes -->
+    <div class="glass-card rounded-xl p-4 border border-slate-800 space-y-2.5">
+      <div class="flex items-center justify-between">
+        <span class="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+          <i class="fa-solid fa-pen-to-square text-cyan-400"></i> My Personal Architecture & Interview Notes
+        </span>
+        <button onclick="saveSysDesignNotes('${c.id}')" class="px-3 py-1 rounded-lg bg-cyan-600/20 hover:bg-cyan-600/30 text-cyan-300 border border-cyan-500/30 text-xs font-semibold transition flex items-center gap-1">
+          <i class="fa-solid fa-floppy-disk"></i> Save Notes
+        </button>
+      </div>
+      <textarea id="sd-case-notes" rows="3" placeholder="Write personal failure modes, exact numbers (e.g. 100M DAU = 1150 QPS write), questions to ask the interviewer, or trade-offs..." class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 custom-scroll">${sdNotes[c.id] || ''}</textarea>
+    </div>
+
     <!-- AI Staff Engineer Critique -->
     <div class="bg-indigo-950/20 border border-indigo-500/30 rounded-xl p-4 space-y-2.5">
       <span class="text-xs font-bold text-indigo-300 flex items-center gap-1.5">
@@ -2050,6 +2178,25 @@ function selectCaseStudy(caseId) {
   `;
 
   if (hasCode) switchSdCodeLang(activeSdCodeLang);
+}
+
+async function saveSysDesignNotes(caseId) {
+  const el = document.getElementById('sd-case-notes');
+  if (!el) return;
+  const notes = el.value;
+  try {
+    const res = await fetch('/api/learning/progress', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ category: 'sysdesign', item_id: caseId, status: sdProgress[caseId] || 'todo', notes })
+    });
+    if (res.ok) {
+      sdNotes[caseId] = notes;
+      showToast('System Design notes saved!');
+    }
+  } catch (e) {
+    showToast('Failed to save notes');
+  }
 }
 
 function switchSdCodeLang(lang) {
@@ -2218,5 +2365,147 @@ async function submitGrillAnswer() {
     showToast('Error grading answer.');
   } finally {
     btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Evaluate & Grill Next';
+  }
+}
+
+// ==========================================
+// UNIVERSAL AI RESEARCH & INTEL AGENT
+// ==========================================
+let activeAiSearchMode = 'general';
+let lastAiSearchQuery = '';
+let lastAiSearchResult = '';
+
+const AI_SEARCH_PLACEHOLDERS = {
+  general: "Ask anything... (e.g. 'What is Zepto\\'s backend interview pattern for SDE-2?', 'Design a low-latency URL shortener in C++ and Node.js', 'Explain distributed locking via Redis SETNX with edge cases')",
+  company: "Enter company name or role... (e.g. 'Postman SDE-2 interview rounds and compensation bands', 'Razorpay engineering culture and tech stack', 'Groww backend team structure')",
+  concept: "Enter CS or system design concept... (e.g. 'Raft consensus vs Paxos for distributed WAL', 'Database sharding vs partitioning with PostgreSQL', 'Bloom filters in caching architecture')",
+  interview: "Enter interview scenario or behavioral question... (e.g. 'How to answer: Tell me about a time you had a high-severity production outage', 'Explain event loop and microtask queue under pressure')",
+  salary: "Enter role, YoE and company tier... (e.g. 'SDE-2 backend with 2.5 YoE negotiating with Tier-1 startup offering 26 LPA base', 'ESOP liquidation and vesting math for Series B')"
+};
+
+function setAiSearchMode(mode) {
+  activeAiSearchMode = mode;
+  const modes = ['general', 'company', 'concept', 'interview', 'salary'];
+  modes.forEach(m => {
+    const btn = document.getElementById(`aimode-${m}`);
+    if (!btn) return;
+    if (m === mode) {
+      btn.className = 'px-3 py-1.5 rounded-xl bg-blue-600 text-white text-xs font-semibold transition flex items-center gap-1.5 shadow-md shadow-blue-600/30';
+    } else {
+      btn.className = 'px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 text-xs font-medium transition flex items-center gap-1.5';
+    }
+  });
+
+  const input = document.getElementById('ai-search-input');
+  if (input && AI_SEARCH_PLACEHOLDERS[mode]) {
+    input.placeholder = AI_SEARCH_PLACEHOLDERS[mode];
+  }
+}
+
+function fillAiSearchPrompt(text) {
+  const input = document.getElementById('ai-search-input');
+  if (input) {
+    input.value = text;
+    input.focus();
+  }
+}
+
+async function executeAiSearch() {
+  const input = document.getElementById('ai-search-input');
+  if (!input) return;
+  const query = input.value.trim();
+  if (!query) {
+    showToast('Enter a query or topic first!');
+    return;
+  }
+
+  const btn = document.getElementById('btn-ai-search');
+  const card = document.getElementById('ai-search-results-card');
+  const pill = document.getElementById('ai-search-provider-pill');
+  const out = document.getElementById('ai-search-output');
+
+  btn.disabled = true;
+  btn.innerHTML = '<span>Thinking...</span> <i class="fa-solid fa-spinner animate-spin text-xs"></i>';
+  card.classList.remove('hidden');
+  pill.innerText = `RESEARCHING (${activeAiSearchMode.toUpperCase()})...`;
+  out.innerHTML = '<span class="text-slate-400 italic font-mono"><i class="fa-solid fa-circle-notch animate-spin mr-2"></i>Synthesizing intelligence from Gemini Pro / Groq high-speed engine...</span>';
+
+  try {
+    const res = await fetch('/api/ai/universal-search', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query, mode: activeAiSearchMode })
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Search failed');
+    }
+
+    const data = await res.json();
+    lastAiSearchQuery = query;
+    lastAiSearchResult = data.result || data.answer || '';
+
+    pill.innerText = `${(data.provider || 'AI').toUpperCase()} • ${data.mode.toUpperCase()}`;
+    out.innerText = lastAiSearchResult;
+    showToast('Intel research generated!');
+  } catch (e) {
+    console.error(e);
+    out.innerText = 'Error generating AI research. Please verify your Gemini or Groq API key in Settings.';
+    showToast('AI search error: ' + (e.message || 'Check keys'));
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<span>Ask AI</span> <i class="fa-solid fa-arrow-up text-xs"></i>';
+  }
+}
+
+function copyAiSearchResult() {
+  if (!lastAiSearchResult) {
+    const out = document.getElementById('ai-search-output');
+    if (out && out.innerText) {
+      lastAiSearchResult = out.innerText;
+    }
+  }
+  if (!lastAiSearchResult) {
+    showToast('No search result to copy.');
+    return;
+  }
+  navigator.clipboard.writeText(lastAiSearchResult).then(() => {
+    showToast('Copied AI research to clipboard!');
+  }).catch(() => {
+    showToast('Failed to copy to clipboard');
+  });
+}
+
+async function saveAiSearchResultToVault() {
+  if (!lastAiSearchResult) {
+    const out = document.getElementById('ai-search-output');
+    if (out && out.innerText) {
+      lastAiSearchResult = out.innerText;
+    }
+  }
+  if (!lastAiSearchResult) {
+    showToast('Execute a search first before saving.');
+    return;
+  }
+
+  const title = (lastAiSearchQuery || 'AI Research Note').slice(0, 100);
+  try {
+    const res = await fetch('/api/documents/custom', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title: title,
+        category: 'ai_research',
+        content: `Query: ${lastAiSearchQuery}\nMode: ${activeAiSearchMode}\nDate: ${new Date().toLocaleString()}\n\n${lastAiSearchResult}`
+      })
+    });
+    if (res.ok) {
+      showToast('Saved research intel to Document Vault!');
+    } else {
+      showToast('Failed to save to Document Vault');
+    }
+  } catch (e) {
+    showToast('Error saving to vault');
   }
 }

@@ -17,7 +17,7 @@ from .schemas import (
     ProfileUpdate, ProfileOut,
     TailorRequest, TailorResponse,
     ApplicationCreate, ApplicationUpdate, ApplicationOut,
-    DocumentOut, StatsResponse,
+    DocumentOut, StatsResponse, CustomDocumentCreate,
     LearningProgressUpdate, DSATutorRequest, SystemDesignReviewRequest,
     ScreeningAnswerRequest, MockGrillRequest, MomentumIncrementRequest
 )
@@ -414,7 +414,8 @@ def get_radar_jobs(
     role_type: str = "all",
     company_type: str = "all",
     salary_range: str = "all",
-    limit: int = 200
+    source_filter: str = "all",
+    limit: int = 250
 ):
     return JobService.fetch_radar_jobs(
         query=query,
@@ -422,7 +423,26 @@ def get_radar_jobs(
         role_type=role_type,
         company_type=company_type,
         salary_range=salary_range,
+        source_filter=source_filter,
         limit=limit
+    )
+
+# ==========================================
+# UNIVERSAL AI RESEARCH AGENT
+# ==========================================
+@app.post("/api/ai/universal-search")
+def universal_ai_search(payload: dict, current_user: User = Depends(get_current_user)):
+    query = (payload.get("query") or "").strip()
+    mode = payload.get("mode") or "general"
+    if not query:
+        raise HTTPException(status_code=400, detail="Query cannot be empty")
+    g_key, q_key = AIService.resolve_keys(current_user.gemini_api_key, current_user.groq_api_key)
+    return AIService.universal_ai_search(
+        query=query,
+        mode=mode,
+        preferred=current_user.preferred_ai or "groq",
+        gemini_key=g_key,
+        groq_key=q_key
     )
 
 # ==========================================
@@ -562,6 +582,22 @@ def get_document(doc_id: int, current_user: User = Depends(get_current_user), db
         raise HTTPException(status_code=404, detail="Document not found")
     return doc
 
+@app.post("/api/documents/custom", response_model=DocumentOut)
+def save_custom_document(payload: CustomDocumentCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    doc = GeneratedDocument(
+        user_id=current_user.id,
+        application_id=None,
+        company="CareerOS Intel",
+        role=payload.title[:250],
+        doc_type=payload.category or "ai_research",
+        content_text=payload.content,
+        created_at=datetime.utcnow()
+    )
+    db.add(doc)
+    db.commit()
+    db.refresh(doc)
+    return doc
+
 # ==========================================
 # DASHBOARD FUNNEL STATS
 # ==========================================
@@ -608,6 +644,9 @@ def get_dsa_sheet(current_user: User = Depends(get_current_user), db: Session = 
         enriched = dict(item)
         enriched["status"] = st_info["status"]
         enriched["notes"] = st_info["notes"]
+        if not enriched.get("gfg_url"):
+            q_title = enriched.get("title", "").replace(" ", "+")
+            enriched["gfg_url"] = f"https://www.geeksforgeeks.org/explore?page=1&search={q_title}"
         problems.append(enriched)
 
     return {
@@ -680,10 +719,12 @@ def get_system_design_hub(current_user: User = Depends(get_current_user), db: Se
         LearningProgress.category == "sysdesign"
     ).all()
     prog_map = {r.item_id: r.status for r in rows}
+    notes_map = {r.item_id: (r.notes or "") for r in rows}
     return {
         "building_blocks": BUILDING_BLOCKS,
         "case_studies": CASE_STUDIES,
-        "progress": prog_map
+        "progress": prog_map,
+        "notes": notes_map
     }
 
 @app.post("/api/sysdesign/ai-review")

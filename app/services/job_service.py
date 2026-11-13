@@ -697,7 +697,7 @@ class JobService:
             resp = requests.get(url, headers={"User-Agent": "CareerOS-ATS/1.0"}, timeout=2.5)
             if resp.status_code != 200:
                 return []
-            tech_kws = ("backend", "back-end", "software engineer", "full stack", "fullstack", "node", "python", "api", "distributed", "platform engineer", "sde")
+            tech_kws = ("backend", "back-end", "software", "engineer", "full stack", "fullstack", "node", "python", "api", "distributed", "platform", "sde", "systems", "developer")
             for item in resp.json().get("jobs", []):
                 title = item.get("title", "")
                 loc = (item.get("location") or {}).get("name", "Remote / Hybrid")
@@ -705,21 +705,22 @@ class JobService:
                 l_low = loc.lower()
                 if not any(k in t_low for k in tech_kws):
                     continue
-                if not any(r in l_low for r in ("india", "bengaluru", "bangalore", "noida", "gurgaon", "hyderabad", "pune", "mumbai", "remote", "anywhere")):
-                    continue
+                apply_url = item.get("absolute_url") or cls.OFFICIAL_CAREERS_MAP.get(company_name, "")
                 results.append({
                     "id": f"gh-{board_slug}-{item.get('id')}",
                     "title": title,
                     "company": company_name,
                     "location": loc,
                     "role_type": "fullstack" if "full" in t_low else "backend",
-                    "level": "sde2" if ("senior" in t_low or "ii" in t_low or "staff" in t_low or "2" in t_low) else "sde1",
-                    "salary": "$75,000 - $125,000 USD" if "india" not in l_low and "bengaluru" not in l_low else "₹22L - ₹38L + ESOPs",
+                    "level": "sde2" if any(w in t_low for w in ("senior", "ii", "staff", "lead", "principal", "2")) else "sde1",
+                    "salary": "$75,000 - $130,000 USD" if "india" not in l_low and "bengaluru" not in l_low else "₹22L - ₹38L + ESOPs",
                     "source": "Greenhouse Live ATS",
                     "company_type": company_type,
-                    "match_score": 95 if ("backend" in t_low or "node" in t_low or "python" in t_low) else 90,
+                    "match_score": 96 if ("backend" in t_low or "node" in t_low or "python" in t_low) else 91,
                     "tags": ["Live ATS", "Direct Apply", "Backend" if "backend" in t_low else "Software"],
-                    "url": item.get("absolute_url") or cls.OFFICIAL_CAREERS_MAP.get(company_name, ""),
+                    "url": apply_url,
+                    "is_direct": True,
+                    "source_badge": "Live ATS • Direct Form",
                     "description": f"Live verified opening on {company_name}'s official Greenhouse ATS ({loc}). Direct application link goes straight to the official submission form."
                 })
         except Exception:
@@ -727,32 +728,137 @@ class JobService:
         return results[:8]
 
     @classmethod
+    def _fetch_single_ashby(cls, board_slug: str, company_name: str, company_type: str) -> List[Dict[str, Any]]:
+        results = []
+        try:
+            url = f"https://api.ashbyhq.com/posting-api/job-board/{board_slug}"
+            resp = requests.get(url, headers={"User-Agent": "CareerOS-ATS/1.0"}, timeout=2.5)
+            if resp.status_code != 200:
+                return []
+            tech_kws = ("backend", "back-end", "software", "engineer", "full stack", "fullstack", "node", "python", "systems", "platform", "developer", "infrastructure", "ai")
+            for item in resp.json().get("jobs", []):
+                title = item.get("title", "")
+                loc = item.get("location") or "Remote / Hybrid"
+                t_low = title.lower()
+                l_low = loc.lower()
+                if not any(k in t_low for k in tech_kws):
+                    continue
+                apply_url = item.get("jobUrl") or item.get("applyUrl") or cls.OFFICIAL_CAREERS_MAP.get(company_name, "")
+                results.append({
+                    "id": f"ash-{board_slug}-{item.get('id', title[:10])}",
+                    "title": title,
+                    "company": company_name,
+                    "location": loc,
+                    "role_type": "fullstack" if "full" in t_low else "backend",
+                    "level": "sde2" if any(w in t_low for w in ("senior", "ii", "staff", "lead", "principal", "2")) else "sde1",
+                    "salary": "$80,000 - $140,000 USD" if "india" not in l_low and "bengaluru" not in l_low else "₹24L - ₹42L + Equity",
+                    "source": "Ashby Live ATS",
+                    "company_type": company_type,
+                    "match_score": 96 if ("backend" in t_low or "python" in t_low or "systems" in t_low) else 91,
+                    "tags": ["Live ATS", "Direct Apply", "Ashby", "Backend" if "backend" in t_low else "Software"],
+                    "url": apply_url,
+                    "is_direct": True,
+                    "source_badge": "Live ATS • Direct Form",
+                    "description": f"Live verified opening on {company_name}'s official Ashby ATS ({loc}). Direct application link leads straight to the candidate submission form."
+                })
+        except Exception:
+            pass
+        return results[:8]
+
+    @classmethod
+    def _fetch_single_lever(cls, board_slug: str, company_name: str, company_type: str) -> List[Dict[str, Any]]:
+        results = []
+        try:
+            url = f"https://api.lever.co/v0/postings/{board_slug}?mode=json"
+            resp = requests.get(url, headers={"User-Agent": "CareerOS-ATS/1.0"}, timeout=2.5)
+            if resp.status_code != 200:
+                return []
+            items = resp.json()
+            if not isinstance(items, list):
+                return []
+            tech_kws = ("backend", "back-end", "software", "engineer", "full stack", "fullstack", "node", "python", "systems", "platform", "developer")
+            for item in items:
+                title = item.get("text", "")
+                cats = item.get("categories") or {}
+                loc = cats.get("location") or "Remote / Hybrid"
+                t_low = title.lower()
+                l_low = loc.lower()
+                if not any(k in t_low for k in tech_kws):
+                    continue
+                apply_url = item.get("hostedUrl") or item.get("applyUrl") or cls.OFFICIAL_CAREERS_MAP.get(company_name, "")
+                results.append({
+                    "id": f"lev-{board_slug}-{item.get('id', title[:10])}",
+                    "title": title,
+                    "company": company_name,
+                    "location": loc,
+                    "role_type": "fullstack" if "full" in t_low else "backend",
+                    "level": "sde2" if any(w in t_low for w in ("senior", "ii", "staff", "lead", "2")) else "sde1",
+                    "salary": "$80,000 - $135,000 USD" if "india" not in l_low and "bengaluru" not in l_low else "₹22L - ₹38L + Stock",
+                    "source": "Lever Live ATS",
+                    "company_type": company_type,
+                    "match_score": 95 if ("backend" in t_low or "python" in t_low) else 90,
+                    "tags": ["Live ATS", "Direct Apply", "Lever", "Backend" if "backend" in t_low else "Software"],
+                    "url": apply_url,
+                    "is_direct": True,
+                    "source_badge": "Live ATS • Direct Form",
+                    "description": f"Live verified opening on {company_name}'s official Lever ATS ({loc}). Direct application link leads straight to the candidate submission form."
+                })
+        except Exception:
+            pass
+        return results[:8]
+
+    @classmethod
     def fetch_public_ats_jobs(cls) -> List[Dict[str, Any]]:
-        """Fetches real-time verified engineering jobs from public Greenhouse ATS endpoints (zero API keys)."""
+        """Fetches real-time verified engineering jobs from public Greenhouse, Ashby, and Lever ATS endpoints (zero API keys)."""
         now = time.time()
         if cls._ATS_CACHE["jobs"] and (now - cls._ATS_CACHE["ts"]) < cls._ATS_CACHE_TTL:
             return cls._ATS_CACHE["jobs"]
 
         boards = [
-            ("postman", "Postman", "cloud"),
-            ("browserstack", "BrowserStack", "cloud"),
-            ("groww", "Groww", "startup"),
-            ("vercel", "Vercel", "cloud"),
-            ("remotecom", "Remote.com", "cloud"),
-            ("deel", "Deel", "cloud"),
-            ("sentry", "Sentry", "cloud"),
-            ("gitlab", "GitLab", "cloud"),
-            ("razorpay", "Razorpay", "startup"),
-            ("cred", "CRED", "startup"),
+            ("gh", "postman", "Postman", "cloud"),
+            ("gh", "browserstack", "BrowserStack", "cloud"),
+            ("gh", "groww", "Groww", "startup"),
+            ("gh", "vercel", "Vercel", "cloud"),
+            ("gh", "remotecom", "Remote.com", "cloud"),
+            ("gh", "deel", "Deel", "cloud"),
+            ("gh", "sentry", "Sentry", "cloud"),
+            ("gh", "gitlab", "GitLab", "cloud"),
+            ("gh", "razorpay", "Razorpay", "startup"),
+            ("gh", "cred", "CRED", "startup"),
+            ("gh", "stripe", "Stripe", "cloud"),
+            ("gh", "figma", "Figma", "cloud"),
+            ("gh", "datadog", "Datadog", "cloud"),
+            ("ashby", "supabase", "Supabase", "cloud"),
+            ("ashby", "linear", "Linear", "cloud"),
+            ("ashby", "perplexity", "Perplexity", "startup"),
+            ("ashby", "ramp", "Ramp", "startup"),
+            ("ashby", "vanta", "Vanta", "cloud"),
+            ("ashby", "elevenlabs", "ElevenLabs", "startup"),
+            ("ashby", "modal", "Modal", "startup"),
+            ("lever", "spotify", "Spotify", "cloud"),
+            ("lever", "coupa", "Coupa", "cloud"),
+            ("lever", "deliveroo", "Deliveroo", "cloud"),
+            ("lever", "yelp", "Yelp", "cloud"),
         ]
         live_jobs: List[Dict[str, Any]] = []
-        with ThreadPoolExecutor(max_workers=6) as executor:
-            futures = [executor.submit(cls._fetch_single_greenhouse, slug, name, ctype) for slug, name, ctype in boards]
-            for fut in as_completed(futures, timeout=3.5):
-                try:
-                    live_jobs.extend(fut.result())
-                except Exception:
-                    pass
+        with ThreadPoolExecutor(max_workers=14) as executor:
+            futures = []
+            for kind, slug, name, ctype in boards:
+                if kind == "gh":
+                    futures.append(executor.submit(cls._fetch_single_greenhouse, slug, name, ctype))
+                elif kind == "ashby":
+                    futures.append(executor.submit(cls._fetch_single_ashby, slug, name, ctype))
+                elif kind == "lever":
+                    futures.append(executor.submit(cls._fetch_single_lever, slug, name, ctype))
+
+            try:
+                for fut in as_completed(futures, timeout=3.5):
+                    try:
+                        live_jobs.extend(fut.result())
+                    except Exception:
+                        pass
+            except Exception:
+                pass
 
         cls._ATS_CACHE = {"ts": now, "jobs": live_jobs}
         return live_jobs
@@ -765,16 +871,16 @@ class JobService:
         role_type: str = "all",
         company_type: str = "all",
         salary_range: str = "all",
-        limit: int = 200
+        source_filter: str = "all",
+        limit: int = 250
     ) -> List[Dict[str, Any]]:
         """
-        Combines our rich verified Indian tech ecosystem with real-time live ATS + Jobicy API jobs.
-        Removes foreign/European listings, guarantees verified direct links,
-        and provides instant multi-factor filtering by company type and salary benchmark.
+        Combines our rich verified Indian tech ecosystem with real-time live ATS (Greenhouse, Ashby, Lever) + Jobicy API jobs.
+        Guarantees verified direct links and distinct badges for Live ATS Direct Forms vs Official Career Portals.
         """
         all_jobs: List[Dict[str, Any]] = []
 
-        # 0. Live Public Startup ATS Openings (Greenhouse - direct apply links, zero API key)
+        # 0. Live Public Startup ATS Openings (Greenhouse, Ashby, Lever - direct apply links, zero API key)
         try:
             all_jobs.extend(cls.fetch_public_ats_jobs())
         except Exception as e:
@@ -928,10 +1034,15 @@ class JobService:
                 })
                 idx += 1
 
-        # 3. Enrich all jobs with official careers links, company_type, and salary_range
+        # 3. Enrich all jobs with official careers links, company_type, salary_range, and badges
         for j in all_jobs:
             comp_name = j.get("company", "")
-            is_live_direct = j.get("source") in ("Greenhouse Live ATS", "Jobicy Live") and bool(j.get("url"))
+            is_live_direct = (
+                j.get("source") in ("Greenhouse Live ATS", "Ashby Live ATS", "Lever Live ATS", "Jobicy Live")
+                or j.get("is_direct") is True
+            ) and bool(j.get("url"))
+            j["is_direct"] = is_live_direct
+            j["source_badge"] = "Live ATS • Direct Form" if is_live_direct else "Careers Portal"
             if not is_live_direct:
                 if comp_name in cls.OFFICIAL_CAREERS_MAP:
                     j["url"] = cls.OFFICIAL_CAREERS_MAP[comp_name]
@@ -953,8 +1064,16 @@ class JobService:
         role_lower = role_type.strip().lower() if role_type else "all"
         company_type_lower = company_type.strip().lower() if company_type else "all"
         salary_range_lower = salary_range.strip().lower() if salary_range else "all"
+        source_filter_lower = source_filter.strip().lower() if source_filter else "all"
 
         for job in all_jobs:
+            # Source Type match (direct_ats vs portal)
+            if source_filter_lower != "all":
+                if source_filter_lower == "direct_ats" and not job.get("is_direct"):
+                    continue
+                elif source_filter_lower == "portal" and job.get("is_direct"):
+                    continue
+
             # Query match
             if q_lower and q_lower != "all":
                 searchable = f"{job['title']} {job['company']} {job['description']} {' '.join(job.get('tags', []))}".lower()

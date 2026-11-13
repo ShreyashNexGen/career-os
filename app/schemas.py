@@ -167,6 +167,11 @@ class MomentumIncrementRequest(BaseModel):
     delta: int = 1
 
 # --- Document Vault Schemas ---
+class CustomDocumentCreate(BaseModel):
+    title: str
+    category: Optional[str] = "ai_research"
+    content: str
+
 class DocumentOut(BaseModel):
     id: int
     application_id: Optional[int]

@@ -926,3 +926,43 @@ Return ONLY raw JSON."""
             "next_question": f"What happens in your {focus_area} solution if Redis or the primary cache node restarts under peak load?",
             "provider": "offline"
         }
+
+    @classmethod
+    def universal_ai_search(
+        cls,
+        query: str,
+        mode: str = "general",
+        preferred: str = "groq",
+        gemini_key: Optional[str] = None,
+        groq_key: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """Custom AI research agent answering any tech, company intel, system design, or interview question."""
+        mode_instructions = {
+            "company": "You are a Principal Tech Recruiter and Staff Engineer with deep insider knowledge of Indian and global tech companies (startups, unicorns, MNCs). Provide real interview rounds, tech stack specifics, engineering culture, and compensation benchmarks.",
+            "concept": "You are a Staff Distributed Systems Engineer and CS Professor. Explain technical concepts with crystal-clear intuition, diagrams in ASCII or Mermaid where useful, code snippets in Python/C++, and real-world production trade-offs.",
+            "interview": "You are an Elite Tech Interview Coach for top-tier product companies (Swiggy, Razorpay, Google, Zepto, CRED). Provide high-scoring STAR responses, killer reverse questions, and architectural insights.",
+            "salary": "You are a Silicon Valley & Indian Tech Compensation Specialist. Provide realistic base, ESOPs, bonus benchmarks, and word-for-word negotiation scripts.",
+            "general": "You are an advanced Engineering AI Assistant (CareerOS Intelligence, like Gemini & Grok). Provide structured, technically accurate, and concise answers with code where relevant."
+        }
+        inst = mode_instructions.get(mode, mode_instructions["general"])
+        prompt = f"""{inst}
+
+User Query:
+{query}
+
+Formatting Guidelines:
+- Structure with clear Markdown headers (###), bullet points, and clean syntax-highlighted code blocks where helpful.
+- Be direct, insightful, and practical—no unnecessary preamble.
+- Cite specific technologies, metrics, and production patterns where appropriate.
+"""
+        text, used = cls.execute_llm_prompt(prompt, preferred=preferred, gemini_key=gemini_key, groq_key=groq_key)
+        if not text:
+            text = f"### CareerOS AI Analysis for: {query}\n\n1. **Core Insight**: In modern high-scale engineering, focus on database indexing, distributed caching (Redis), and event-driven architecture (Kafka/SQS).\n2. **Interview Advice**: Quantify impact using the Google XYZ formula (Achieved X, measured by Y, by doing Z).\n3. **Production Metric**: Always architect for sub-50ms P99 latency and fault tolerance with graceful degradation."
+            used = "CareerOS Engine"
+        return {
+            "answer": text,
+            "result": text,
+            "provider": used,
+            "mode": mode,
+            "query": query
+        }
