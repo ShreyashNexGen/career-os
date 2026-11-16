@@ -19,6 +19,7 @@ class User(Base):
     applications = relationship("Application", back_populates="user", cascade="all, delete-orphan")
     documents = relationship("GeneratedDocument", back_populates="user", cascade="all, delete-orphan")
     jobs = relationship("JobPosting", back_populates="user", cascade="all, delete-orphan")
+    chat_sessions = relationship("AiChatSession", back_populates="user", cascade="all, delete-orphan")
 
 class CandidateProfile(Base):
     __tablename__ = "candidate_profiles"
@@ -116,3 +117,27 @@ class DailyMomentum(Base):
     dsa_count = Column(Integer, default=0)
     design_count = Column(Integer, default=0)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+class AiChatSession(Base):
+    __tablename__ = "ai_chat_sessions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    title = Column(String(255), nullable=False, default="New Conversation")
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    user = relationship("User", back_populates="chat_sessions")
+    messages = relationship("AiChatMessage", back_populates="session", cascade="all, delete-orphan", order_by="AiChatMessage.id")
+
+class AiChatMessage(Base):
+    __tablename__ = "ai_chat_messages"
+
+    id = Column(Integer, primary_key=True, index=True)
+    session_id = Column(Integer, ForeignKey("ai_chat_sessions.id"), nullable=False, index=True)
+    role = Column(String(20), nullable=False) # user, assistant, system
+    content = Column(Text, nullable=False)
+    provider = Column(String(50), nullable=True) # gemini, groq, offline
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    session = relationship("AiChatSession", back_populates="messages")

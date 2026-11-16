@@ -113,6 +113,229 @@ class JobService:
 
     # 75+ Curated, High-Conversion Indian Tech & Remote Jobs
     CURATED_JOBS: List[Dict[str, Any]] = [
+        # --- TOP HIGH-YIELD REMOTE CONTRACTS (TARGET: ₹1L - ₹3L+ INR / $1,200 - $3,500 USD / MO) ---
+        {
+            "id": "rc-001",
+            "title": "Full Stack Backend Contractor (Node.js, Express & PostgreSQL)",
+            "company": "Braintrust Tech",
+            "location": "100% Remote (India / Worldwide)",
+            "role_type": "backend",
+            "work_type": "remote_contract",
+            "level": "sde2",
+            "salary": "$25 - $40/hr (₹1.3L - ₹2.2L/mo)",
+            "source": "Remote Contract (USD)",
+            "match_score": 98,
+            "tags": ["Remote Contract", "₹1L+/Mo Target", "Node.js", "Express", "PostgreSQL", "Redis", "APIs"],
+            "url": "https://www.usebraintrust.com/talent",
+            "is_direct": True,
+            "source_badge": "Remote Contract • ₹1L+/mo ($1.2k+)",
+            "description": "High-yield remote contract for US/EU enterprise client. Build and scale RESTful microservices, tune database indexes, and implement Redis caching. Flexible 30-40 hrs/week paying $25-$40/hr in USD directly to Indian bank account."
+        },
+        {
+            "id": "rc-002",
+            "title": "Backend Systems Developer (Python, Flask & Redis) - Contract",
+            "company": "Toptal Client Network",
+            "location": "100% Remote (Global)",
+            "role_type": "backend",
+            "work_type": "remote_contract",
+            "level": "sde2",
+            "salary": "$30 - $50/hr (₹1.6L - ₹2.7L/mo)",
+            "source": "Remote Contract (USD)",
+            "match_score": 97,
+            "tags": ["Remote Contract", "₹1L+/Mo Target", "Python", "Flask", "Redis", "Distributed Systems", "Docker"],
+            "url": "https://www.toptal.com/developers",
+            "is_direct": True,
+            "source_badge": "Remote Contract • ₹1L+/mo ($1.2k+)",
+            "description": "US fintech client seeking a backend engineer to optimize asynchronous payment reconciliations and event processing pipelines. Direct contract with monthly wire transfers in USD ($1,600 - $2,700/mo)."
+        },
+        {
+            "id": "rc-003",
+            "title": "API & Microservices Contractor (TypeScript, Node.js & SQL)",
+            "company": "Lemon.io Scaleup",
+            "location": "100% Remote",
+            "role_type": "backend",
+            "work_type": "remote_contract",
+            "level": "sde2",
+            "salary": "$28 - $42/hr (₹1.5L - ₹2.3L/mo)",
+            "source": "Remote Contract (USD)",
+            "match_score": 96,
+            "tags": ["Remote Contract", "₹1L+/Mo Target", "TypeScript", "Node.js", "MySQL", "JWT", "REST APIs"],
+            "url": "https://lemon.io/for-developers",
+            "is_direct": True,
+            "source_badge": "Remote Contract • ₹1L+/mo ($1.2k+)",
+            "description": "Vetted startup contract with a European SaaS scaleup. Architect 50+ new API endpoints, manage database migrations, and maintain zero-downtime microservices."
+        },
+        {
+            "id": "rc-004",
+            "title": "Core Backend Platform Engineer (6-Month Retainer Contract)",
+            "company": "Scalable Path",
+            "location": "100% Remote",
+            "role_type": "backend",
+            "work_type": "remote_contract",
+            "level": "sde2",
+            "salary": "$2,000 - $3,200 / mo (₹1.7L - ₹2.7L/mo)",
+            "source": "Remote Contract (USD)",
+            "match_score": 96,
+            "tags": ["Remote Contract", "₹1L+/Mo Target", "Node.js", "Express", "MongoDB", "Redis", "AWS"],
+            "url": "https://www.scalablepath.com/freelance-developer-jobs",
+            "is_direct": True,
+            "source_badge": "Remote Contract • ₹1L+/mo ($1.2k+)",
+            "description": "Fixed monthly retainer contract ($2,000 - $3,200/mo guaranteed). Build high-throughput enterprise logistics and order tracking microservices."
+        },
+        {
+            "id": "rc-005",
+            "title": "Backend Microservices Developer (FastAPI & Docker) - Remote Gig",
+            "company": "Axiom Cloud",
+            "location": "Remote (India / Global)",
+            "role_type": "backend",
+            "work_type": "remote_contract",
+            "level": "sde2",
+            "salary": "$1,600 - $2,600 / mo (₹1.3L - ₹2.2L/mo)",
+            "source": "Remote Contract (USD)",
+            "match_score": 95,
+            "tags": ["Remote Contract", "₹1L+/Mo Target", "Python", "FastAPI", "Docker", "PostgreSQL", "Telemetry"],
+            "url": "https://axiomcloud.com/careers",
+            "is_direct": True,
+            "source_badge": "Remote Contract • ₹1L+/mo ($1.2k+)",
+            "description": "Smart energy telemetry and industrial IoT backend. Connect sensor pipelines to cloud microservices with sub-10ms response times. Ongoing 3-6 month contract."
+        },
+        {
+            "id": "rc-006",
+            "title": "Full Stack Engineer (React + Node.js) - Contract to Hire",
+            "company": "Revelo Global",
+            "location": "100% Remote",
+            "role_type": "fullstack",
+            "work_type": "remote_contract",
+            "level": "sde2",
+            "salary": "$1,800 - $2,800 / mo (₹1.5L - ₹2.4L/mo)",
+            "source": "Remote Contract (USD)",
+            "match_score": 95,
+            "tags": ["Remote Contract", "₹1L+/Mo Target", "React", "Node.js", "PostgreSQL", "TailwindCSS"],
+            "url": "https://www.revelo.com/developers",
+            "is_direct": True,
+            "source_badge": "Remote Contract • ₹1L+/mo ($1.2k+)",
+            "description": "US tech scaleup looking for a strong product engineer. Build merchant dashboards in React and resilient REST API microservices."
+        },
+        {
+            "id": "rc-007",
+            "title": "Database & SQL Optimization Specialist (Contract)",
+            "company": "Proxify Remote",
+            "location": "100% Remote",
+            "role_type": "backend",
+            "work_type": "remote_contract",
+            "level": "sde2",
+            "salary": "$25 - $38/hr (₹1.3L - ₹2.0L/mo)",
+            "source": "Remote Contract (USD)",
+            "match_score": 94,
+            "tags": ["Remote Contract", "₹1L+/Mo Target", "SQL Server", "MySQL", "Indexing", "Query Plans", "Redis"],
+            "url": "https://proxify.io/apply",
+            "is_direct": True,
+            "source_badge": "Remote Contract • ₹1L+/mo ($1.2k+)",
+            "description": "Audit complex stored procedures, tune execution plans, resolve locks/deadlocks, and add Redis caching layers for high-volume client workloads."
+        },
+        {
+            "id": "rc-008",
+            "title": "Cloud Backend Engineer (AWS, Serverless, Python) - Contract",
+            "company": "Arc.dev Scaleup",
+            "location": "100% Remote",
+            "role_type": "backend",
+            "work_type": "remote_contract",
+            "level": "sde2",
+            "salary": "$2,200 - $3,500 / mo (₹1.8L - ₹2.9L/mo)",
+            "source": "Remote Contract (USD)",
+            "match_score": 94,
+            "tags": ["Remote Contract", "₹1L+/Mo Target", "Python", "AWS Lambda", "DynamoDB", "S3", "API Gateway"],
+            "url": "https://arc.dev/developer-jobs",
+            "is_direct": True,
+            "source_badge": "Remote Contract • ₹1L+/mo ($1.2k+)",
+            "description": "Serverless event-driven architecture contract. Maintain high availability across AWS Lambda, SQS, and PostgreSQL endpoints."
+        },
+        {
+            "id": "rc-009",
+            "title": "Backend API Contractor (Node.js & MongoDB)",
+            "company": "RemoteBase",
+            "location": "100% Remote (India)",
+            "role_type": "backend",
+            "work_type": "remote_contract",
+            "level": "sde1",
+            "salary": "$1,400 - $2,200 / mo (₹1.2L - ₹1.8L/mo)",
+            "source": "Remote Contract (USD)",
+            "match_score": 94,
+            "tags": ["Remote Contract", "₹1L+/Mo Target", "Node.js", "Express", "MongoDB", "REST APIs"],
+            "url": "https://remotebase.com/apply",
+            "is_direct": True,
+            "source_badge": "Remote Contract • ₹1L+/mo ($1.2k+)",
+            "description": "Immediate placement with North American software products. Build authentication, webhook handling, and transactional APIs."
+        },
+        {
+            "id": "rc-010",
+            "title": "Distributed Systems Contractor (Go / C++ / Python)",
+            "company": "Turing Enterprise",
+            "location": "100% Remote",
+            "role_type": "systems",
+            "work_type": "remote_contract",
+            "level": "sde2",
+            "salary": "$30 - $48/hr (₹1.6L - ₹2.6L/mo)",
+            "source": "Remote Contract (USD)",
+            "match_score": 95,
+            "tags": ["Remote Contract", "₹1L+/Mo Target", "C++", "Python", "Go", "Low Latency", "Algorithms"],
+            "url": "https://www.turing.com/jobs",
+            "is_direct": True,
+            "source_badge": "Remote Contract • ₹1L+/mo ($1.2k+)",
+            "description": "High-scale distributed systems work. Strong DSA and concurrent programming pedigree rewarded with premium USD hourly rates."
+        },
+        # --- PART-TIME REMOTE TECH GIGS (15-20 HRS/WEEK, ₹50k - ₹1.2L/MO) ---
+        {
+            "id": "pt-001",
+            "title": "Part-Time Backend Maintainer (Node.js & Express - 20 hrs/wk)",
+            "company": "Cal.com Partner",
+            "location": "100% Remote",
+            "role_type": "backend",
+            "work_type": "part_time",
+            "level": "sde1",
+            "salary": "$1,200 - $1,800 / mo (₹1.0L - ₹1.5L/mo)",
+            "source": "Part-Time Remote",
+            "match_score": 96,
+            "tags": ["Part-Time Remote", "₹1L+/Mo Target", "Node.js", "Express", "PostgreSQL", "Webhooks"],
+            "url": "https://cal.com/jobs",
+            "is_direct": True,
+            "source_badge": "Remote Part-Time • ₹1L-₹1.5L/mo",
+            "description": "Flexible 20 hours per week maintaining scheduling APIs, calendar webhook syncs, and database query optimizations."
+        },
+        {
+            "id": "pt-002",
+            "title": "Part-Time Software Developer (Python & SQL Telemetry - 15 hrs/wk)",
+            "company": "IoT Fleet Analytics",
+            "location": "100% Remote",
+            "role_type": "backend",
+            "work_type": "part_time",
+            "level": "sde1",
+            "salary": "$900 - $1,400 / mo (₹75k - ₹1.2L/mo)",
+            "source": "Part-Time Remote",
+            "match_score": 93,
+            "tags": ["Part-Time Remote", "₹1L+/Mo Target", "Python", "Flask", "SQL", "WebSockets"],
+            "url": "https://weworkremotely.com",
+            "is_direct": True,
+            "source_badge": "Remote Part-Time • ₹75k-₹1.2L/mo",
+            "description": "Ideal side contract. Ingest hardware telemetry pings, maintain automated reconciliation scripts, and fix API bugs."
+        },
+        {
+            "id": "pt-003",
+            "title": "Part-Time Full Stack Support Engineer (TypeScript & Next.js)",
+            "company": "Vercel Ecosystem Client",
+            "location": "100% Remote",
+            "role_type": "fullstack",
+            "work_type": "part_time",
+            "level": "sde1",
+            "salary": "$1,100 - $1,700 / mo (₹90k - ₹1.4L/mo)",
+            "source": "Part-Time Remote",
+            "match_score": 94,
+            "tags": ["Part-Time Remote", "₹1L+/Mo Target", "TypeScript", "Next.js", "TailwindCSS", "REST APIs"],
+            "url": "https://remoteok.com",
+            "is_direct": True,
+            "source_badge": "Remote Part-Time • ₹90k-₹1.4L/mo",
+            "description": "Async 15-20 hours/week. Review PRs, triage customer integration issues, and ship incremental frontend/backend fixes."
+        },
         # --- BENGALURU ---
         {
             "id": "ind-001",
@@ -872,6 +1095,7 @@ class JobService:
         company_type: str = "all",
         salary_range: str = "all",
         source_filter: str = "all",
+        work_type: str = "all",
         limit: int = 250
     ) -> List[Dict[str, Any]]:
         """
@@ -1065,8 +1289,33 @@ class JobService:
         company_type_lower = company_type.strip().lower() if company_type else "all"
         salary_range_lower = salary_range.strip().lower() if salary_range else "all"
         source_filter_lower = source_filter.strip().lower() if source_filter else "all"
+        work_type_lower = work_type.strip().lower() if work_type else "all"
 
         for job in all_jobs:
+            # Work Type match (remote_contract, part_time, remote_all, direct_ats)
+            if work_type_lower != "all":
+                wt = job.get("work_type", "").lower()
+                title_l = job.get("title", "").lower()
+                badge_l = job.get("source_badge", "").lower()
+                loc_l = job.get("location", "").lower()
+
+                if work_type_lower == "remote_contract":
+                    is_rc = (wt == "remote_contract" or "contract" in title_l or "contract" in badge_l or 
+                             ("remote" in loc_l and ("contract" in title_l or "contract" in job.get("source", "").lower() or "$" in job.get("salary", ""))))
+                    if not is_rc:
+                        continue
+                elif work_type_lower == "part_time":
+                    is_pt = (wt == "part_time" or "part" in title_l or "part-time" in badge_l)
+                    if not is_pt:
+                        continue
+                elif work_type_lower == "remote_all":
+                    is_rem = ("remote" in loc_l or "worldwide" in loc_l or "global" in loc_l or wt in ("remote_contract", "part_time"))
+                    if not is_rem:
+                        continue
+                elif work_type_lower == "direct_ats":
+                    if not job.get("is_direct"):
+                        continue
+
             # Source Type match (direct_ats vs portal)
             if source_filter_lower != "all":
                 if source_filter_lower == "direct_ats" and not job.get("is_direct"):

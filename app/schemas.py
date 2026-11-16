@@ -208,3 +208,33 @@ class SalaryBenchmarkResponse(BaseModel):
     total_ctc_range: str
     insights: List[str]
     negotiation_script: str
+
+# --- AI Assistant Clone & Chat History Schemas ---
+class ChatMessageOut(BaseModel):
+    id: int
+    session_id: int
+    role: str
+    content: str
+    provider: Optional[str] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class ChatSessionOut(BaseModel):
+    id: int
+    title: str
+    created_at: datetime
+    updated_at: datetime
+    message_count: Optional[int] = 0
+    messages: Optional[List[ChatMessageOut]] = None
+
+    class Config:
+        from_attributes = True
+
+class ChatSessionCreate(BaseModel):
+    title: Optional[str] = "New Conversation"
+
+class ChatMessageSendRequest(BaseModel):
+    content: str
+    provider: Optional[str] = None # gemini, groq, or None (use user preference)

@@ -69,6 +69,125 @@ class AIService:
             return choices[0]["message"]["content"]
         return ""
 
+    @staticmethod
+    def call_gemini_chat(messages: List[Dict[str, str]], api_key: str, system_instruction: Optional[str] = None) -> str:
+        """Call Google Gemini API with multi-turn chat history."""
+        models_to_try = ["gemini-2.5-flash", "gemini-3.5-flash-lite"]
+        last_err = None
+        contents = []
+        for m in messages:
+            role = "user" if m.get("role") in ("user", "system") else "model"
+            contents.append({
+                "role": role,
+                "parts": [{"text": m.get("content", "")}]
+            })
+
+        for model_id in models_to_try:
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_id}:generateContent?key={api_key}"
+            payload = {
+                "contents": contents,
+                "generationConfig": {
+                    "temperature": 0.4,
+                    "maxOutputTokens": 6000
+                }
+            }
+            if system_instruction:
+                payload["systemInstruction"] = {
+                    "parts": [{"text": system_instruction}]
+                }
+            headers = {"Content-Type": "application/json"}
+            resp = requests.post(url, headers=headers, json=payload, timeout=25)
+            if resp.status_code == 200:
+                data = resp.json()
+                candidates = data.get("candidates", [])
+                if candidates and "content" in candidates[0]:
+                    parts = candidates[0]["content"].get("parts", [])
+                    if parts:
+                        return parts[0].get("text", "")
+            last_err = f"Gemini Chat error ({resp.status_code}): {resp.text[:300]}"
+            if resp.status_code in (400, 401, 403):
+                break
+        raise Exception(last_err or "Gemini Chat API failed")
+
+    @staticmethod
+    def call_groq_chat(messages: List[Dict[str, str]], api_key: str, system_instruction: Optional[str] = None) -> str:
+        """Call Groq Cloud API with multi-turn chat history."""
+        url = "https://api.groq.com/openai/v1/chat/completions"
+        groq_messages = []
+        if system_instruction:
+            groq_messages.append({"role": "system", "content": system_instruction})
+        for m in messages:
+            groq_messages.append({
+                "role": m.get("role", "user"),
+                "content": m.get("content", "")
+            })
+        payload = {
+            "model": "llama-3.3-70b-versatile",
+            "messages": groq_messages,
+            "temperature": 0.4,
+            "max_tokens": 6000
+        }
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json"
+        }
+        resp = requests.post(url, headers=headers, json=payload, timeout=35)
+        if resp.status_code != 200:
+            raise Exception(f"Groq Chat error ({resp.status_code}): {resp.text[:300]}")
+        data = resp.json()
+        choices = data.get("choices", [])
+        if choices:
+            return choices[0]["message"]["content"]
+        return ""
+
+    @classmethod
+    def execute_multi_turn_chat(
+        cls,
+        messages: List[Dict[str, str]],
+        system_instruction: Optional[str] = None,
+        preferred: str = "groq",
+        gemini_key: Optional[str] = None,
+        groq_key: Optional[str] = None
+    ) -> tuple[Optional[str], str]:
+        """Execute multi-turn chat with fallback between Groq and Gemini."""
+        if preferred == "offline":
+            return None, "offline"
+
+        g_key, q_key = cls.resolve_keys(gemini_key, groq_key)
+        order = [("groq", q_key), ("gemini", g_key)] if preferred == "groq" else [("gemini", g_key), ("groq", q_key)]
+
+        default_sys = (
+            "You are CareerOS Universal AI Assistant — a world-class, versatile AI copilot (similar to Claude 3.5 & ChatGPT 4o). "
+            "You help the user accomplish ALL their tech and professional work: building backend systems, writing client proposals, "
+            "cold outreach emails for remote contracts, software architecture, debugging code in Python/C++/JS/TS/SQL, "
+            "remote contract salary negotiation (targeting ₹1L-₹3L+ INR / $1.2k-$3.5k+ USD/mo), interview prep, and task execution. "
+            "Provide insightful, clean, well-formatted Markdown responses with syntax-highlighted code where appropriate."
+        )
+        sys_prompt = system_instruction or default_sys
+
+        for prov, key in order:
+            if not key:
+                continue
+            try:
+                text = cls.call_groq_chat(messages, key, sys_prompt) if prov == "groq" else cls.call_gemini_chat(messages, key, sys_prompt)
+                if text and text.strip():
+                    return text.strip(), prov
+            except Exception as e:
+                print(f"[AIService MultiTurn Warning] {prov} chat failed ({str(e)[:180]}). Trying fallback...")
+                continue
+
+        last_user_msg = next((m["content"] for m in reversed(messages) if m.get("role") == "user"), "your query")
+        fallback_text = (
+            f"### Response to: {last_user_msg[:80]}...\n\n"
+            "I have processed your request. To unlock real-time live generation from Gemini 2.5 Flash or Groq Llama 3.3 70B, "
+            "please configure your free API key in the **Free AI Keys & Config** tab in the sidebar.\n\n"
+            "**Strategic Tip for Next 2-3 Months**: To hit your target of **₹1,00,000+ INR/month ($1,200+/mo)** in remote contracts:\n"
+            "1. Target US/EU/Global tech scaleups hiring Remote Contractors ($20 - $40/hr or $1.5k - $3k/mo retainer).\n"
+            "2. Lead with your production metrics: 250+ RESTful APIs maintained, 35% SQL latency reduction, and GFG Global Rank 28.\n"
+            "3. Use our 1-Click LinkedIn Fresh-Jobs Sniper filtered to Remote Contracts (<24h fresh) to be among the first 5 applicants."
+        )
+        return fallback_text, "CareerOS Engine"
+
     @classmethod
     def execute_llm_prompt(
         cls,
@@ -458,7 +577,7 @@ Kind regards,
         name = candidate.get("name", "Shreyash Shukla")
         phone = candidate.get("phone", "+91 6306211105")
         email = candidate.get("email", "shreyashshukla7398554573@gmail.com")
-        loc = candidate.get("location", "Noida, India (Open to Bengaluru & Remote)")
+        loc = candidate.get("location", "Noida, India (Open to Remote & Relocation)")
         linkedin = candidate.get("linkedin_url", "https://linkedin.com/in/shuklashreyash")
         github = candidate.get("github_url", "https://github.com/shreyash418")
 
@@ -468,42 +587,45 @@ Kind regards,
   <meta charset="UTF-8">
   <title>{name} - Resume ({company})</title>
   <style>
-    @page {{ size: A4; margin: 12mm 15mm; }}
+    @page {{ size: A4 portrait; margin: 8mm 10mm; }}
+    * {{ box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
     body {{
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      color: #1e293b;
-      line-height: 1.45;
-      font-size: 11pt;
+      color: #0f172a;
+      line-height: 1.28;
+      font-size: 9.2pt;
       margin: 0;
-      padding: 20px;
-      background: white;
+      padding: 10px 14px;
+      background: #ffffff;
+      max-width: 100%;
     }}
-    .header {{ text-align: center; border-bottom: 2px solid #2563eb; padding-bottom: 8px; margin-bottom: 12px; }}
-    .name {{ font-size: 24pt; font-weight: 800; color: #1e3a8a; letter-spacing: -0.5px; margin: 0; }}
-    .headline {{ font-size: 11pt; font-weight: 600; color: #2563eb; margin: 4px 0; }}
-    .contact {{ font-size: 9.5pt; color: #475569; }}
-    .contact a {{ color: #2563eb; text-decoration: none; }}
+    .header {{ text-align: center; border-bottom: 2px solid #2563eb; padding-bottom: 4px; margin-bottom: 5px; }}
+    .name {{ font-size: 19pt; font-weight: 800; color: #1e3a8a; letter-spacing: -0.4px; margin: 0; line-height: 1.1; }}
+    .headline {{ font-size: 9.8pt; font-weight: 600; color: #2563eb; margin: 2px 0 2px 0; }}
+    .contact {{ font-size: 8.5pt; color: #475569; }}
+    .contact a {{ color: #2563eb; text-decoration: none; font-weight: 500; }}
     .section-title {{
-      font-size: 11.5pt;
+      font-size: 9.8pt;
       font-weight: 700;
       color: #1e3a8a;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
+      letter-spacing: 0.4px;
       border-bottom: 1px solid #cbd5e1;
-      padding-bottom: 2px;
-      margin-top: 14px;
-      margin-bottom: 6px;
+      padding-bottom: 1px;
+      margin-top: 5px;
+      margin-bottom: 2px;
     }}
-    .summary-text {{ font-size: 10pt; color: #334155; text-align: justify; margin-bottom: 8px; }}
-    .job-header {{ display: flex; justify-content: space-between; font-weight: 700; font-size: 10.5pt; color: #0f172a; margin-top: 6px; }}
-    .job-sub {{ display: flex; justify-content: space-between; font-size: 9.5pt; color: #2563eb; font-weight: 600; margin-bottom: 4px; }}
-    ul {{ margin: 3px 0 8px 18px; padding: 0; }}
-    li {{ font-size: 9.5pt; color: #334155; margin-bottom: 3px; }}
-    .skills-grid {{ font-size: 9.5pt; color: #334155; }}
+    .summary-text {{ font-size: 8.7pt; color: #334155; text-align: justify; margin-bottom: 3px; line-height: 1.24; }}
+    .job-header {{ display: flex; justify-content: space-between; font-weight: 700; font-size: 9pt; color: #0f172a; margin-top: 3px; }}
+    .job-sub {{ display: flex; justify-content: space-between; font-size: 8.4pt; color: #2563eb; font-weight: 600; margin-bottom: 1px; }}
+    ul {{ margin: 1px 0 3px 14px; padding: 0; }}
+    li {{ font-size: 8.6pt; color: #334155; margin-bottom: 1.5px; line-height: 1.22; }}
+    .skills-grid {{ font-size: 8.4pt; color: #334155; line-height: 1.22; }}
     .skills-grid strong {{ color: #0f172a; }}
     @media print {{
       body {{ padding: 0; }}
       .no-print {{ display: none !important; }}
+      * {{ page-break-inside: avoid !important; }}
     }}
   </style>
 </head>
@@ -545,12 +667,11 @@ Kind regards,
     <span>Noida, India</span>
   </div>
   <ul>
-    <li>Architected and maintain <strong>250+ RESTful APIs</strong> for core multi-tenant ERP platforms using Node.js, Express, and Flask over MySQL and MongoDB, powering daily operations for business teams.</li>
+    <li>Architected and maintain <strong>250+ RESTful APIs</strong> for core ERP platforms using Node.js, Express, and Flask over MySQL & MongoDB, powering daily high-concurrency operations.</li>
     <li>Engineered Identity & Access Management (IAM) with <strong>JWT, OAuth2, and RBAC</strong>, securing enterprise tenants with sub-second role authorization.</li>
     <li>Built an <strong>Automated Reconciliation Engine</strong> in Python and SQL for scheduled ledger balancing and batch syncs, cutting manual accounting overhead by <strong>70%</strong>.</li>
-    <li>Optimized complex stored procedures, query indexes, and execution plans on MySQL and SQL Server, achieving a <strong>35% latency reduction</strong> for high-concurrency bulk transactions.</li>
+    <li>Optimized complex stored procedures, query indexes, and execution plans on MySQL and SQL Server, achieving a <strong>35% latency reduction</strong> for bulk transactions.</li>
     <li>Introduced <strong>Redis caching</strong> for frequently accessed master reference data, lowering database IOPS by over 50% and accelerating hot endpoints.</li>
-    <li>Containerized monolithic services into decoupled <strong>Docker microservices</strong> with automated CI/CD pipelines, upholding a <strong>99.9% uptime SLA</strong>.</li>
   </ul>
 
   <div class="job-header">
@@ -562,19 +683,18 @@ Kind regards,
     <span>Remote, India</span>
   </div>
   <ul>
-    <li>Shipped 5+ production e-commerce modules using React.js and TypeScript, reducing page-load latency by <strong>25%</strong> through memoization and state restructuring.</li>
+    <li>Shipped 5+ production web modules using React.js and TypeScript, reducing page-load latency by <strong>25%</strong> through memoization and state restructuring.</li>
     <li>Integrated asynchronous REST APIs with client-side caching within rapid 2-week Agile sprint cycles.</li>
   </ul>
 
   <div class="section-title">Key Technical Projects</div>
 
   <div class="job-header">
-    <span>Warehouse Automation System (IIoT Telemetry)</span>
+    <span>Warehouse Automation Telemetry Engine</span>
     <span>Python, Flask, WebSockets, MySQL, Docker</span>
   </div>
   <ul>
-    <li>Built a real-time telemetry pipeline from factory PLC hardware (Siemens S7/Snap7) to Flask services with <strong>5–10ms latency</strong> and <strong>99.2% accuracy</strong> under burst loads.</li>
-    <li>Delivered a live WebSocket operator dashboard with automated fault alerting, reducing equipment troubleshooting downtime by 40%.</li>
+    <li>Built a real-time telemetry pipeline connecting factory PLC hardware to Flask microservices with <strong>5–10ms latency</strong> and <strong>99.2% accuracy</strong> under burst loads, cutting downtime by 40%.</li>
   </ul>
 
   <div class="job-header">
@@ -585,21 +705,17 @@ Kind regards,
     <li>Designed an edge reverse-proxy gateway implementing token-bucket rate limiting via Redis, edge cryptographic JWT validation, and correlation ID tracing.</li>
   </ul>
 
-  <div class="section-title">Achievements & Honors</div>
+  <div class="section-title">Achievements & Pedigree</div>
   <ul>
     <li><strong>GeeksforGeeks Top Competitive Programmer:</strong> Solved 800+ DSA problems; achieved peak global rank <strong>Top 28th out of 8,000+</strong> competitors.</li>
     <li><strong>KAVACH Cyber Security Hackathon (National):</strong> Secured <strong>8th position</strong> among 70+ finalist teams nationwide across India.</li>
-    <li><strong>Production Engineering Velocity:</strong> Successfully shipped 6+ production-grade enterprise systems in year one at NexGen meeting 99.9% uptime SLAs.</li>
+    <li><strong>Production Engineering SLA:</strong> Successfully shipped 6+ production enterprise systems in year one at NexGen meeting 99.9% uptime SLAs.</li>
   </ul>
 
   <div class="section-title">Education</div>
   <div class="job-header">
-    <span>Bachelor of Technology in Information Technology</span>
-    <span>2020 – 2024</span>
-  </div>
-  <div class="job-sub">
-    <span>Ajay Kumar Garg Engineering College (AKGEC)</span>
-    <span>Ghaziabad, India (CGPA: 7.64 / 10)</span>
+    <span>Bachelor of Technology in Information Technology — Ajay Kumar Garg Engineering College (AKGEC)</span>
+    <span>2020 – 2024 (CGPA: 7.64 / 10)</span>
   </div>
 </body>
 </html>

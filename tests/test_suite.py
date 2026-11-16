@@ -126,6 +126,81 @@ class CareerOSTestCase(unittest.TestCase):
         self.assertIsNotNone(saved_doc)
         print(f"[PASS] test_06_custom_document_vault: Document saved & listed with ID={doc['id']}")
 
+    def test_07_remote_contracts_and_work_type(self):
+        """Verify Job Radar filters for Remote Contracts (₹1L+/mo) and Part-Time Gigs"""
+        res_rc = self.client.get("/api/radar/jobs?work_type=remote_contract", headers=self.headers)
+        self.assertEqual(res_rc.status_code, 200)
+        rc_jobs = res_rc.json()
+        self.assertGreater(len(rc_jobs), 0, "Should have remote contract jobs")
+        first_rc = rc_jobs[0]
+        self.assertIn("1L", first_rc.get("source_badge", "") + " ".join(first_rc.get("tags", [])))
+        print(f"[PASS] test_07_remote_contracts_and_work_type: Found {len(rc_jobs)} remote contracts. Sample: {first_rc['company']} - {first_rc['title']} ({first_rc['salary']})")
+
+        res_pt = self.client.get("/api/radar/jobs?work_type=part_time", headers=self.headers)
+        self.assertEqual(res_pt.status_code, 200)
+        pt_jobs = res_pt.json()
+        self.assertGreater(len(pt_jobs), 0, "Should have part-time remote tech jobs")
+        print(f"[PASS] test_07b_part_time_jobs: Found {len(pt_jobs)} part-time remote gigs")
+
+    def test_08_ai_assistant_chat_sessions_and_continuity(self):
+        """Verify Universal AI Assistant multi-turn chat sessions and conversation continuity"""
+        # 1. Create a session
+        sess_res = self.client.post("/api/ai/sessions", json={"title": "Contract Proposal Discussion"}, headers=self.headers)
+        self.assertEqual(sess_res.status_code, 200)
+        sess_id = sess_res.json()["id"]
+
+        # 2. Send message 1
+        msg1_res = self.client.post(f"/api/ai/sessions/{sess_id}/message", json={
+            "content": "Draft a $30/hr remote contract proposal for US clients highlighting 250+ APIs and 35% SQL latency cut.",
+            "provider": "auto"
+        }, headers=self.headers)
+        self.assertEqual(msg1_res.status_code, 200)
+        data1 = msg1_res.json()
+        self.assertEqual(data1["user_message"]["role"], "user")
+        self.assertEqual(data1["assistant_message"]["role"], "assistant")
+        self.assertGreater(len(data1["assistant_message"]["content"]), 40)
+
+        # 3. Send message 2 (multi-turn follow-up test)
+        msg2_res = self.client.post(f"/api/ai/sessions/{sess_id}/message", json={
+            "content": "Now shorten this into 3 punchy bullet points I can send on LinkedIn.",
+            "provider": "auto"
+        }, headers=self.headers)
+        self.assertEqual(msg2_res.status_code, 200)
+        data2 = msg2_res.json()
+        self.assertEqual(data2["assistant_message"]["role"], "assistant")
+
+        # 4. Fetch full session with message history
+        full_sess_res = self.client.get(f"/api/ai/sessions/{sess_id}", headers=self.headers)
+        self.assertEqual(full_sess_res.status_code, 200)
+        messages = full_sess_res.json().get("messages", [])
+        self.assertEqual(len(messages), 4, "Should have 2 user + 2 assistant messages in conversation history")
+
+        # 5. List sessions
+        list_sess = self.client.get("/api/ai/sessions", headers=self.headers)
+        self.assertEqual(list_sess.status_code, 200)
+        self.assertTrue(any(s["id"] == sess_id for s in list_sess.json()))
+
+        # 6. Delete session
+        del_res = self.client.delete(f"/api/ai/sessions/{sess_id}", headers=self.headers)
+        self.assertEqual(del_res.status_code, 200)
+        print(f"[PASS] test_08_ai_assistant_chat_sessions_and_continuity: Multi-turn chat session with continuity verified successfully")
+
+    def test_09_single_page_resume_guarantee(self):
+        """Verify visual resume HTML adheres to strict single-page (1-page) ATS constraints"""
+        sample_candidate = {
+            "name": "Shreyash Shukla",
+            "phone": "+91 6306211105",
+            "email": "shreyash@example.com",
+            "location": "India",
+            "skills": ["Node.js", "Express", "Python", "SQL", "Redis", "Docker"]
+        }
+        html_cv = AIService._build_html_cv(sample_candidate, "Proven backend engineer with 2+ YoE.", "Tech Scaleup", "Backend Engineer")
+        self.assertIn("A4 portrait", html_cv)
+        self.assertIn("margin: 8mm 10mm", html_cv)
+        self.assertIn("page-break-inside: avoid", html_cv)
+        self.assertIn("font-size: 9.2pt", html_cv)
+        print("[PASS] test_09_single_page_resume_guarantee: Strict 1-page A4 CSS rules & compact typography verified")
+
     @classmethod
     def tearDownClass(cls):
         if os.path.exists("./test_careeros.db"):

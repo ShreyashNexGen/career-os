@@ -630,17 +630,25 @@
 
           <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 pt-2 border-t border-slate-800/70">
             <select id="sniper-role" class="bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-sky-500">
+              <option value="Remote Contract Backend Engineer Node.js Python" selected>🔥 Remote Contract Backend (₹1L+/mo)</option>
+              <option value="Remote Contract Full Stack Developer">🔥 Remote Contract Full Stack ($25-$40/hr)</option>
+              <option value="Part Time Remote Software Engineer">⏱️ Part-Time Remote SDE (15-20 hrs/wk)</option>
               <option value="Backend Engineer Node.js Python">Backend (Node / Python)</option>
               <option value="Full Stack Developer React Node.js">Full Stack (React / Node)</option>
-              <option value="SDE 1 Software Engineer">SDE-1 / Software Engineer</option>
               <option value="SDE 2 Backend Developer">SDE-2 Backend</option>
               <option value="Python Backend Engineer">Python / FastAPI / Flask</option>
             </select>
             <select id="sniper-loc" class="bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-sky-500">
+              <option value="Remote" selected>100% Remote Worldwide ($ USD)</option>
+              <option value="India">Remote / Hybrid India</option>
               <option value="Bengaluru, Karnataka, India">Bengaluru</option>
               <option value="Delhi NCR, India">Delhi NCR (Noida / Gurgaon)</option>
-              <option value="India">All India (Hybrid / Remote)</option>
-              <option value="Remote">Remote Worldwide</option>
+            </select>
+            <select id="sniper-work-type" class="bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-emerald-300 font-medium focus:outline-none focus:border-sky-500">
+              <option value="contract" selected>Contract & Freelance (₹1L+/mo)</option>
+              <option value="part_time">Part-Time (15-20 hrs/wk)</option>
+              <option value="full_time">Full-Time Remote</option>
+              <option value="all">All Employment Types</option>
             </select>
             <select id="sniper-time" class="bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-amber-300 font-medium focus:outline-none focus:border-sky-500">
               <option value="r3600">⚡ Past 1 Hour (Golden Window)</option>
@@ -651,12 +659,8 @@
               <input type="checkbox" id="sniper-easy-apply" checked class="accent-sky-500 rounded">
               <span>Easy Apply Only</span>
             </label>
-            <label class="flex items-center gap-2 bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5 text-[11px] text-slate-300 cursor-pointer">
-              <input type="checkbox" id="sniper-early" checked class="accent-emerald-500 rounded">
-              <span>&lt;10 Applicants</span>
-            </label>
-            <button onclick="launchLinkedInSniper()" class="px-3 py-1.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition shadow-md shadow-sky-600/20">
-              <i class="fa-solid fa-crosshairs"></i> Snipe LinkedIn
+            <button onclick="launchLinkedInSniper()" class="px-3 py-1.5 rounded-xl bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-500 hover:to-blue-500 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition shadow-md shadow-sky-600/20">
+              <i class="fa-solid fa-crosshairs"></i> Snipe Remote Gigs
             </button>
           </div>
 
@@ -699,14 +703,45 @@
             </div>
           </div>
 
-          <!-- 6-Factor Multi-Tier Filters Row -->
+          <!-- Quick Work Type Priority Pills (Next 2-3 Months Focus: ₹1L+/Mo Remote) -->
+          <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar pt-1 pb-1 text-xs">
+            <span class="text-slate-400 font-mono text-[11px] shrink-0 mr-1"><i class="fa-solid fa-crosshairs text-emerald-400"></i> Target:</span>
+            <button onclick="setRadarWorkTypeQuickFilter('remote_contract')" id="pill-wt-remote-contract" class="px-3 py-1 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/40 text-xs font-bold shrink-0 transition flex items-center gap-1.5 shadow-sm">
+              <span>🔥 Remote Contracts (₹1L+/mo)</span>
+            </button>
+            <button onclick="setRadarWorkTypeQuickFilter('part_time')" id="pill-wt-part-time" class="px-3 py-1 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 text-xs font-medium shrink-0 transition flex items-center gap-1.5">
+              <span>⏱️ Part-Time Remote</span>
+            </button>
+            <button onclick="setRadarWorkTypeQuickFilter('remote_all')" id="pill-wt-remote-all" class="px-3 py-1 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 text-xs font-medium shrink-0 transition flex items-center gap-1.5">
+              <span>🌐 100% Remote Global</span>
+            </button>
+            <button onclick="setRadarWorkTypeQuickFilter('direct_ats')" id="pill-wt-direct-ats" class="px-3 py-1 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 text-xs font-medium shrink-0 transition flex items-center gap-1.5">
+              <span>⚡ Live ATS Forms</span>
+            </button>
+            <button onclick="setRadarWorkTypeQuickFilter('all')" id="pill-wt-all" class="px-3 py-1 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-400 border border-slate-800 text-xs font-medium shrink-0 transition">
+              <span>All Openings</span>
+            </button>
+          </div>
+
+          <!-- Multi-Tier Filters Row -->
           <div id="radar-filters-panel" class="hidden sm:grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 pt-2 border-t border-slate-800/80">
             <div>
               <label class="block text-[11px] font-mono text-slate-400 mb-1">Search Keywords</label>
               <div class="relative">
                 <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-500 text-xs"></i>
-                <input type="text" id="radar-search" oninput="applyRadarFilters()" placeholder="Node.js, Zepto, Backend..." class="w-full bg-slate-950 border border-slate-800 rounded-xl pl-8 pr-3 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500">
+                <input type="text" id="radar-search" oninput="applyRadarFilters()" placeholder="Node.js, Contract, Remote..." class="w-full bg-slate-950 border border-slate-800 rounded-xl pl-8 pr-3 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500">
               </div>
+            </div>
+
+            <div>
+              <label class="block text-[11px] font-mono text-slate-400 mb-1">Work & Contract Type</label>
+              <select id="radar-filter-work-type" onchange="applyRadarFilters()" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-emerald-400 font-semibold focus:outline-none focus:border-blue-500">
+                <option value="all">All Work Types</option>
+                <option value="remote_contract">🔥 Remote Contract (₹1L+/mo)</option>
+                <option value="part_time">⏱️ Part-Time Remote</option>
+                <option value="remote_all">🌐 100% Remote Global</option>
+                <option value="direct_ats">⚡ Live ATS Direct Form</option>
+              </select>
             </div>
 
             <div>
@@ -1122,92 +1157,151 @@ Performance Metrics:
       </div>
 
       <!-- ========================================== -->
-      <!-- TAB 4B: UNIVERSAL AI RESEARCH AGENT        -->
+      <!-- TAB 4B: UNIVERSAL AI ASSISTANT & CHAT CLONE -->
       <!-- ========================================== -->
-      <div id="tab-ai-search" class="space-y-6 hidden">
-        <div class="max-w-5xl mx-auto space-y-6">
+      <div id="tab-ai-search" class="space-y-4 hidden">
+        <div class="flex flex-col lg:flex-row gap-4 h-[760px] max-w-7xl mx-auto items-stretch">
           
-          <!-- Hero Search Box (Perplexity / Grok style) -->
-          <div class="glass-card rounded-2xl p-6 sm:p-8 border border-amber-500/30 bg-gradient-to-br from-amber-950/20 via-slate-900/80 to-purple-950/20 shadow-2xl space-y-5">
-            <div class="flex items-center justify-between">
-              <div class="flex items-center gap-3">
-                <span class="w-10 h-10 rounded-2xl bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center text-lg shadow-md shadow-amber-500/20">
-                  <i class="fa-solid fa-sparkles"></i>
-                </span>
-                <div>
-                  <h3 class="text-base sm:text-lg font-bold text-white flex items-center gap-2">
-                    CareerOS AI Research & Intelligence Agent
-                    <span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">Gemini & Groq Powered</span>
-                  </h3>
-                  <p class="text-xs text-slate-400">Ask anything: company tech stack, interview patterns, system design trade-offs, or code solutions</p>
-                </div>
+          <!-- LEFT SIDEBAR: CHAT THREADS & SESSIONS (ChatGPT / Claude Style) -->
+          <div class="w-full lg:w-72 shrink-0 glass-card rounded-2xl p-4 border border-slate-800 flex flex-col h-[260px] lg:h-full bg-slate-900/95 shadow-xl">
+            <!-- New Chat Button -->
+            <button onclick="startNewAiChat()" class="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-bold text-xs flex items-center justify-between shadow-lg shadow-indigo-600/25 transition">
+              <span class="flex items-center gap-2"><i class="fa-solid fa-plus text-xs"></i> New Conversation</span>
+              <span class="text-[10px] bg-white/20 px-1.5 py-0.5 rounded font-mono">Chat</span>
+            </button>
+
+            <!-- Conversations List Header -->
+            <div class="flex items-center justify-between mt-4 pb-2 border-b border-slate-800 text-[11px] font-mono text-slate-400">
+              <span class="font-bold flex items-center gap-1.5"><i class="fa-solid fa-clock-rotate-left"></i> Chat History</span>
+              <span id="ai-chat-thread-count" class="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 font-bold">0</span>
+            </div>
+
+            <!-- Scrollable Conversations List -->
+            <div id="ai-chat-threads-list" class="flex-1 overflow-y-auto custom-scroll space-y-1.5 mt-2 pr-1">
+              <div class="text-center py-8 text-slate-500 text-xs font-mono">
+                <i class="fa-regular fa-comments text-lg mb-1 block text-slate-600"></i>
+                No conversations yet
               </div>
             </div>
 
-            <!-- Mode Selector Pills -->
-            <div class="flex flex-wrap items-center gap-2 pt-1">
-              <button onclick="setAiSearchMode('general')" id="aimode-general" class="px-3 py-1.5 rounded-xl bg-blue-600 text-white text-xs font-semibold transition flex items-center gap-1.5">
-                <i class="fa-solid fa-globe"></i> Universal Search
-              </button>
-              <button onclick="setAiSearchMode('company')" id="aimode-company" class="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 text-xs font-medium transition flex items-center gap-1.5">
-                <i class="fa-solid fa-building"></i> Company Intel & Rounds
-              </button>
-              <button onclick="setAiSearchMode('concept')" id="aimode-concept" class="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 text-xs font-medium transition flex items-center gap-1.5">
-                <i class="fa-solid fa-brain"></i> System Design & CS
-              </button>
-              <button onclick="setAiSearchMode('interview')" id="aimode-interview" class="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 text-xs font-medium transition flex items-center gap-1.5">
-                <i class="fa-solid fa-comments"></i> Interview Coaching
-              </button>
-              <button onclick="setAiSearchMode('salary')" id="aimode-salary" class="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 text-xs font-medium transition flex items-center gap-1.5">
-                <i class="fa-solid fa-money-bill-wave"></i> Salary & Negotiation
-              </button>
-            </div>
-
-            <!-- Search Input Box -->
-            <div class="relative">
-              <textarea id="ai-search-input" rows="3" placeholder="Ask anything... (e.g. 'What is Zepto\'s backend interview pattern for SDE-2?', 'Design a low-latency URL shortener in C++ and Node.js', 'Explain distributed locking via Redis SETNX with edge cases')" class="w-full bg-slate-950 border border-slate-800 rounded-2xl p-4 pr-28 text-xs sm:text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 custom-scroll transition"></textarea>
-              <button onclick="executeAiSearch()" id="btn-ai-search" class="absolute right-3 bottom-4 px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 shadow-lg shadow-amber-500/25 transition">
-                <span>Ask AI</span> <i class="fa-solid fa-arrow-up text-xs"></i>
-              </button>
-            </div>
-
-            <!-- Fast Click Inspiration Chips -->
-            <div class="flex flex-wrap items-center gap-2 pt-1 text-[11px]">
-              <span class="text-slate-500 font-mono">Suggested:</span>
-              <button onclick="fillAiSearchPrompt('What are the exact interview rounds and backend tech stack for SDE-2 at Swiggy & Zepto?')" class="px-2.5 py-1 rounded-lg bg-slate-950/80 hover:bg-slate-800 text-slate-300 border border-slate-800 transition">
-                Swiggy / Zepto SDE-2 Rounds
-              </button>
-              <button onclick="fillAiSearchPrompt('How to implement an Idempotent Payment Switch handling duplicate webhooks in Node.js and PostgreSQL?')" class="px-2.5 py-1 rounded-lg bg-slate-950/80 hover:bg-slate-800 text-slate-300 border border-slate-800 transition">
-                Idempotent Payment Webhooks
-              </button>
-              <button onclick="fillAiSearchPrompt('Top 10 Redis caching questions asked at Razorpay with code examples and cache invalidation gotchas')" class="px-2.5 py-1 rounded-lg bg-slate-950/80 hover:bg-slate-800 text-slate-300 border border-slate-800 transition">
-                Razorpay Redis Interview Qs
-              </button>
-              <button onclick="fillAiSearchPrompt('Word-for-word counter-offer salary negotiation script for 28L CTC offer at an Indian unicorn')" class="px-2.5 py-1 rounded-lg bg-slate-950/80 hover:bg-slate-800 text-slate-300 border border-slate-800 transition">
-                Salary Counter-Offer Script
+            <!-- Bottom Engine Pill -->
+            <div class="pt-3 border-t border-slate-800 shrink-0 flex items-center justify-between text-[11px]">
+              <div class="flex items-center gap-1.5 text-slate-400">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span id="ai-chat-engine-status" class="font-mono text-[10px]">Gemini 2.5 / Groq</span>
+              </div>
+              <button onclick="switchTab('settings')" title="Manage Free AI Keys" class="text-slate-400 hover:text-white transition">
+                <i class="fa-solid fa-gear"></i>
               </button>
             </div>
           </div>
 
-          <!-- Search Results Stream Card -->
-          <div id="ai-search-results-card" class="hidden glass-card rounded-2xl p-6 sm:p-7 border border-slate-800 space-y-4">
-            <div class="flex items-center justify-between pb-3 border-b border-slate-800">
-              <div class="flex items-center gap-2">
-                <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                <span class="text-xs font-mono font-bold text-white uppercase tracking-wider" id="ai-search-provider-pill">CareerOS Intel</span>
+          <!-- RIGHT MAIN CHAT AREA -->
+          <div class="flex-1 glass-card rounded-2xl border border-slate-800 flex flex-col h-[520px] lg:h-full bg-slate-950/70 shadow-2xl overflow-hidden">
+            
+            <!-- Chat Header Bar -->
+            <div class="px-4 sm:px-5 py-3 border-b border-slate-800/90 flex flex-wrap items-center justify-between gap-3 bg-slate-900/80 shrink-0">
+              <div class="flex items-center gap-3 min-w-0">
+                <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center text-white text-sm shadow-md shadow-blue-500/20 shrink-0">
+                  <i class="fa-solid fa-wand-magic-sparkles"></i>
+                </div>
+                <div class="min-w-0">
+                  <h3 id="ai-chat-session-title" class="text-xs sm:text-sm font-bold text-white truncate max-w-xs sm:max-w-md">CareerOS Universal Assistant</h3>
+                  <p class="text-[10px] text-slate-400 flex items-center gap-1.5">
+                    <span class="text-emerald-400 font-semibold">Target: ₹1L+/Mo Remote Contracts</span> • All AI Work & Continuity
+                  </p>
+                </div>
               </div>
-              <div class="flex items-center gap-2">
-                <button onclick="copyAiSearchResult()" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold flex items-center gap-1.5 transition">
-                  <i class="fa-regular fa-copy"></i> Copy Answer
+
+              <!-- Controls -->
+              <div class="flex items-center gap-2 shrink-0">
+                <select id="ai-chat-provider-select" class="bg-slate-950 border border-slate-800 text-[11px] text-slate-300 rounded-xl px-2.5 py-1 focus:outline-none focus:border-indigo-500">
+                  <option value="gemini">Google Gemini 2.5</option>
+                  <option value="groq">Groq (Llama 3.3 70B Fast)</option>
+                  <option value="auto">Auto Failover</option>
+                </select>
+                <button onclick="saveActiveChatToVault()" title="Save Conversation to Vault" class="p-1.5 px-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-blue-400 border border-slate-800 text-xs transition flex items-center gap-1">
+                  <i class="fa-solid fa-bookmark"></i> <span class="hidden sm:inline">Save</span>
                 </button>
-                <button onclick="saveAiSearchResultToVault()" class="px-3 py-1.5 rounded-xl bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/30 text-xs font-semibold flex items-center gap-1.5 transition">
-                  <i class="fa-solid fa-bookmark"></i> Save to Notes
+                <button onclick="deleteActiveChatSession()" title="Delete Conversation" class="p-1.5 px-2 rounded-xl bg-slate-900 hover:bg-rose-950/40 text-slate-400 hover:text-rose-400 border border-slate-800 text-xs transition">
+                  <i class="fa-regular fa-trash-can"></i>
                 </button>
               </div>
             </div>
 
-            <!-- Rendered Output Area -->
-            <div id="ai-search-output" class="text-xs sm:text-sm text-slate-200 leading-relaxed font-sans space-y-3 whitespace-pre-wrap selection:bg-amber-500/30"></div>
+            <!-- Messages Stream Area -->
+            <div id="ai-chat-messages-wrap" class="flex-1 overflow-y-auto custom-scroll p-4 sm:p-6 space-y-4">
+              <!-- Welcome State Card -->
+              <div id="ai-chat-welcome-card" class="max-w-2xl mx-auto py-6 space-y-5 text-center">
+                <div class="w-14 h-14 rounded-2xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-purple-600 text-white flex items-center justify-center text-2xl mx-auto shadow-xl shadow-indigo-500/20">
+                  <i class="fa-solid fa-sparkles"></i>
+                </div>
+                <div>
+                  <h2 class="text-base sm:text-lg font-bold text-white">How can I help you earn ₹1L+/mo or execute your tech work today?</h2>
+                  <p class="text-xs text-slate-400 mt-1 max-w-lg mx-auto leading-relaxed">
+                    I am your full-service AI Copilot with multi-turn chat memory. Ask for client pitches, contract negotiation, system architecture, debugging, or cold emails.
+                  </p>
+                </div>
+
+                <!-- 4 Quick Starter Cards -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-left pt-2">
+                  <button onclick="triggerQuickAiPrompt('Draft a high-conversion client proposal for a $30/hr remote backend developer contract, highlighting my 250+ production APIs, SQL tuning (35% latency drop), and GFG Top 28 rank.')" class="p-3.5 rounded-xl bg-slate-900/90 hover:bg-slate-800/90 border border-slate-800 hover:border-indigo-500/50 text-left transition group">
+                    <div class="text-xs font-bold text-indigo-300 flex items-center gap-1.5 mb-1 group-hover:text-indigo-200">
+                      <i class="fa-solid fa-file-contract text-indigo-400"></i> $30/hr Client Proposal
+                    </div>
+                    <p class="text-[11px] text-slate-400 leading-snug">Pitch for remote contract citing 250+ APIs & SQL latency reduction</p>
+                  </button>
+
+                  <button onclick="triggerQuickAiPrompt('What is the optimal 3-month strategy for an Indian backend engineer (2 YoE) to land a ₹1,00,000+ to ₹2,00,000/month remote contract or full-time gig? Give exact platforms, outreach scripts, and weekly roadmap.')" class="p-3.5 rounded-xl bg-slate-900/90 hover:bg-slate-800/90 border border-slate-800 hover:border-emerald-500/50 text-left transition group">
+                    <div class="text-xs font-bold text-emerald-300 flex items-center gap-1.5 mb-1 group-hover:text-emerald-200">
+                      <i class="fa-solid fa-bullseye text-emerald-400"></i> ₹1L+/Mo 3-Month Roadmap
+                    </div>
+                    <p class="text-[11px] text-slate-400 leading-snug">Step-by-step game plan for US/EU remote contracts & retainers</p>
+                  </button>
+
+                  <button onclick="triggerQuickAiPrompt('Write a cold email to a US startup founder pitching my backend services for a part-time / contract SDE role (15-20 hrs/week) with high ROI and zero onboarding friction.')" class="p-3.5 rounded-xl bg-slate-900/90 hover:bg-slate-800/90 border border-slate-800 hover:border-blue-500/50 text-left transition group">
+                    <div class="text-xs font-bold text-blue-300 flex items-center gap-1.5 mb-1 group-hover:text-blue-200">
+                      <i class="fa-solid fa-envelope-open-text text-blue-400"></i> Founder Cold Outreach
+                    </div>
+                    <p class="text-[11px] text-slate-400 leading-snug">Short, punchy email for part-time / contract remote openings</p>
+                  </button>
+
+                  <button onclick="triggerQuickAiPrompt('Explain how to design an Idempotent Payment Switch handling duplicate webhooks in Node.js and PostgreSQL with distributed locking via Redis SETNX.')" class="p-3.5 rounded-xl bg-slate-900/90 hover:bg-slate-800/90 border border-slate-800 hover:border-amber-500/50 text-left transition group">
+                    <div class="text-xs font-bold text-amber-300 flex items-center gap-1.5 mb-1 group-hover:text-amber-200">
+                      <i class="fa-solid fa-code text-amber-400"></i> Code & Architecture Deep-Dive
+                    </div>
+                    <p class="text-[11px] text-slate-400 leading-snug">Distributed locking, Redis SETNX, and sub-50ms idempotency</p>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Message Bubbles Container -->
+              <div id="ai-chat-messages-container" class="space-y-4"></div>
+            </div>
+
+            <!-- Sticky Bottom Prompt Input Area -->
+            <div class="p-3 sm:p-4 border-t border-slate-800/90 bg-slate-900/80 shrink-0 space-y-2">
+              <div class="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 text-[11px]">
+                <span class="text-slate-500 font-mono text-[10px] shrink-0">Quick Ask:</span>
+                <button onclick="triggerQuickAiPrompt('How should I negotiate a remote contract offering $2,000/mo to $2,800/mo retainer?')" class="px-2 py-0.5 rounded-lg bg-slate-950 text-slate-300 border border-slate-800 hover:text-white shrink-0 transition">
+                  💰 Negotiate $2.8k Retainer
+                </button>
+                <button onclick="triggerQuickAiPrompt('Review my resume bullet: reduced SQL latency by 35% with Redis. How can I make it stronger for US recruiters?')" class="px-2 py-0.5 rounded-lg bg-slate-950 text-slate-300 border border-slate-800 hover:text-white shrink-0 transition">
+                  📄 Polish Metric Bullet
+                </button>
+                <button onclick="triggerQuickAiPrompt('Write a follow-up message after 4 days of sending client contract pitch.')" class="px-2 py-0.5 rounded-lg bg-slate-950 text-slate-300 border border-slate-800 hover:text-white shrink-0 transition">
+                  ⏱️ 4-Day Contract Follow-Up
+                </button>
+              </div>
+
+              <div class="relative flex items-end gap-2 bg-slate-950 border border-slate-800 rounded-2xl p-2.5 focus-within:border-indigo-500 transition shadow-inner">
+                <textarea id="ai-chat-prompt-input" rows="2" placeholder="Message CareerOS Assistant... (Press Enter to send, Shift+Enter for new line)" class="w-full bg-transparent text-xs sm:text-sm text-white placeholder-slate-500 focus:outline-none resize-none custom-scroll leading-relaxed"></textarea>
+                <button onclick="sendAiChatMessage()" id="btn-ai-chat-send" class="px-3.5 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs flex items-center gap-1.5 shrink-0 shadow-md shadow-indigo-600/20 transition disabled:opacity-50">
+                  <span>Send</span> <i class="fa-solid fa-paper-plane text-xs"></i>
+                </button>
+              </div>
+            </div>
+
           </div>
 
         </div>

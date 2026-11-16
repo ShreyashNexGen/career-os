@@ -88,11 +88,12 @@ function switchTab(tabId) {
     prep: 'Mock Interview Grill Mode, domain blueprints, technical Q&As & STAR stories',
     salary: 'Expected market CTC, stock options, and word-for-word negotiation scripts',
     vault: 'Historical vault of all generated documents and LaTeX sources',
+    'ai-search': 'Full-capability AI Copilot with multi-turn chat history • ₹1L+/mo Remote Focus',
     profile: 'Single source of truth used by the AI tailoring engine',
     settings: 'Groq / Gemini AI keys & persistent Supabase setup guide'
   };
 
-  document.getElementById('page-title').innerText = titles[tabId] || 'CareerOS';
+  document.getElementById('page-title').innerText = titles[tabId] || (tabId === 'ai-search' ? 'Universal AI Assistant' : 'CareerOS');
   document.getElementById('page-subtitle').innerText = subtitles[tabId] || '';
 
   if (tabId === 'pipeline') loadApplications();
@@ -101,6 +102,7 @@ function switchTab(tabId) {
   if (tabId === 'dsa' && allDsaProblems.length === 0) loadDsaHub();
   if (tabId === 'sysdesign' && !sysDesignLoaded) loadSysDesignHub();
   if (tabId === 'corecs' && coreCsTopics.length === 0) loadCoreCsHub();
+  if (tabId === 'ai-search') loadAiChatSessions();
 }
 
 function toggleMobileSidebar() {
@@ -514,7 +516,10 @@ function downloadResumePdf() {
   exportDiv.style.left = '0';
   exportDiv.style.top = '0';
   exportDiv.style.width = '794px'; // 210mm in pixels at 96 DPI
-  exportDiv.style.padding = '32px 36px';
+  exportDiv.style.maxHeight = '1120px'; // Exact 1-Page A4 height bound
+  exportDiv.style.overflow = 'hidden';
+  exportDiv.style.boxSizing = 'border-box';
+  exportDiv.style.padding = '18px 24px';
   exportDiv.style.background = '#ffffff';
   exportDiv.style.color = '#0f172a';
   exportDiv.style.zIndex = '-9999';
@@ -627,15 +632,26 @@ const radarPageSize = 24;
 let currentFilteredRadarJobs = [];
 
 function launchLinkedInSniper() {
-  const role = document.getElementById('sniper-role')?.value || 'Backend Engineer';
-  const loc = document.getElementById('sniper-loc')?.value || 'Bengaluru';
+  const role = document.getElementById('sniper-role')?.value || 'Remote Contract Backend Engineer Node.js Python';
+  const loc = document.getElementById('sniper-loc')?.value || 'Remote';
+  const workType = document.getElementById('sniper-work-type')?.value || 'contract';
   const time = document.getElementById('sniper-time')?.value || 'r86400';
   const easy = document.getElementById('sniper-easy-apply')?.checked ?? true;
   const under10 = (document.getElementById('sniper-under-10')?.checked || document.getElementById('sniper-early')?.checked) ?? true;
 
-  let url = `https://www.linkedin.com/jobs/search/?keywords=${encodeURIComponent(role)}&location=${encodeURIComponent(loc)}`;
+  let url = `https://www.linkedin.com/jobs/search/?keywords=${encodeURIComponent(role)}&location=${encodeURIComponent(loc)}&sortBy=DD`;
   if (time && time !== 'all') {
     url += `&f_TPR=${time}`;
+  }
+  if (workType === 'contract') {
+    url += '&f_JT=C%2CF&f_WRA=true';
+  } else if (workType === 'part_time') {
+    url += '&f_JT=P&f_WRA=true';
+  } else if (workType === 'full_time') {
+    url += '&f_JT=F&f_WRA=true';
+  }
+  if (loc === 'Remote') {
+    url += '&f_WT=2'; // 100% Remote filter code
   }
   if (easy) {
     url += '&f_LF=f_AL';
@@ -645,6 +661,28 @@ function launchLinkedInSniper() {
   }
   window.open(url, '_blank');
   showToast(`Launched LinkedIn Live Sniper for ${role}!`);
+}
+
+function setRadarWorkTypeQuickFilter(wt) {
+  const sel = document.getElementById('radar-filter-work-type');
+  if (sel) sel.value = wt;
+
+  ['remote-contract', 'part-time', 'remote-all', 'direct-ats', 'all'].forEach(k => {
+    const p = document.getElementById(`pill-wt-${k}`);
+    if (!p) return;
+    const match = (k === 'remote-contract' && wt === 'remote_contract') ||
+                  (k === 'part-time' && wt === 'part_time') ||
+                  (k === 'remote-all' && wt === 'remote_all') ||
+                  (k === 'direct-ats' && wt === 'direct_ats') ||
+                  (k === 'all' && wt === 'all');
+    if (match) {
+      p.className = 'px-3 py-1 rounded-xl bg-emerald-600 text-white border border-emerald-500 text-xs font-bold shrink-0 transition flex items-center gap-1.5 shadow-md shadow-emerald-600/30';
+    } else {
+      p.className = 'px-3 py-1 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 text-xs font-medium shrink-0 transition flex items-center gap-1.5';
+    }
+  });
+
+  applyRadarFilters();
 }
 
 async function loadRadarJobs() {
@@ -665,6 +703,7 @@ async function loadRadarJobs() {
 
 function applyRadarFilters() {
   const query = (document.getElementById('radar-search')?.value || '').trim().toLowerCase();
+  const workType = (document.getElementById('radar-filter-work-type')?.value || 'all').toLowerCase();
   const sourceFilter = (document.getElementById('radar-filter-source')?.value || 'all').toLowerCase();
   const compType = (document.getElementById('radar-filter-company')?.value || 'all').toLowerCase();
   const salRange = (document.getElementById('radar-filter-salary')?.value || 'all').toLowerCase();
@@ -673,6 +712,29 @@ function applyRadarFilters() {
   const sort = document.getElementById('radar-filter-sort')?.value || 'score';
 
   currentFilteredRadarJobs = allRadarJobs.filter(j => {
+    // Work Type filter (remote_contract, part_time, remote_all, direct_ats)
+    if (workType !== 'all') {
+      const wt = (j.work_type || '').toLowerCase();
+      const titleL = (j.title || '').toLowerCase();
+      const badgeL = (j.source_badge || '').toLowerCase();
+      const locL = (j.location || '').toLowerCase();
+      const salL = (j.salary || '').toLowerCase();
+
+      if (workType === 'remote_contract') {
+        const isRc = wt === 'remote_contract' || titleL.includes('contract') || badgeL.includes('contract') ||
+                     (locL.includes('remote') && (titleL.includes('contract') || salL.includes('$') || salL.includes('mo')));
+        if (!isRc) return false;
+      } else if (workType === 'part_time') {
+        const isPt = wt === 'part_time' || titleL.includes('part') || badgeL.includes('part-time');
+        if (!isPt) return false;
+      } else if (workType === 'remote_all') {
+        const isRem = locL.includes('remote') || locL.includes('worldwide') || locL.includes('global') || wt === 'remote_contract' || wt === 'part_time';
+        if (!isRem) return false;
+      } else if (workType === 'direct_ats') {
+        if (!j.is_direct) return false;
+      }
+    }
+
     // Direct ATS vs Portal source filter
     if (sourceFilter !== 'all') {
       if (sourceFilter === 'direct_ats' && !j.is_direct) return false;
@@ -789,9 +851,17 @@ function renderRadarGrid(jobs) {
                           (job.company_type === 'mnc' ? '<span class="text-[9px] font-mono px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-300 border border-blue-500/20 font-bold uppercase">Tier-1 MNC</span>' :
                           '<span class="text-[9px] font-mono px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-300 border border-purple-500/20 font-bold uppercase">Cloud/DevTools</span>');
 
-    const sourceBadge = job.is_direct
-      ? '<span class="text-[9px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold flex items-center gap-1 shrink-0"><i class="fa-solid fa-bolt text-emerald-400"></i> Direct ATS Form</span>'
-      : '<span class="text-[9px] font-mono px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-300 border border-blue-500/30 font-medium shrink-0">Official Portal</span>';
+    let sourceBadge = '';
+    const badgeText = job.source_badge || '';
+    if (badgeText.includes('Remote Contract') || (job.tags && job.tags.includes('Remote Contract'))) {
+      sourceBadge = '<span class="text-[9px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/25 text-emerald-300 border border-emerald-500/50 font-bold flex items-center gap-1 shrink-0"><i class="fa-solid fa-fire text-amber-400"></i> Remote Contract • ₹1L+/mo</span>';
+    } else if (badgeText.includes('Part-Time') || (job.tags && job.tags.includes('Part-Time Remote'))) {
+      sourceBadge = '<span class="text-[9px] font-mono px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 font-bold flex items-center gap-1 shrink-0"><i class="fa-solid fa-clock text-cyan-400"></i> Part-Time Remote</span>';
+    } else if (job.is_direct) {
+      sourceBadge = '<span class="text-[9px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold flex items-center gap-1 shrink-0"><i class="fa-solid fa-bolt text-emerald-400"></i> Direct ATS Form</span>';
+    } else {
+      sourceBadge = '<span class="text-[9px] font-mono px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-300 border border-blue-500/30 font-medium shrink-0">Official Portal</span>';
+    }
 
     const jobUrl = job.url || `https://www.google.com/search?q=${encodeURIComponent(job.company + ' careers')}`;
 
@@ -1098,7 +1168,10 @@ async function downloadDocPdf(docId) {
     exportDiv.style.left = '0';
     exportDiv.style.top = '0';
     exportDiv.style.width = '794px'; // 210mm in pixels at 96 DPI
-    exportDiv.style.padding = '32px 36px';
+    exportDiv.style.maxHeight = '1120px'; // Strict 1-Page A4 height
+    exportDiv.style.overflow = 'hidden';
+    exportDiv.style.boxSizing = 'border-box';
+    exportDiv.style.padding = '18px 24px';
     exportDiv.style.background = '#ffffff';
     exportDiv.style.color = '#0f172a';
     exportDiv.style.zIndex = '-9999';
@@ -2369,139 +2442,400 @@ async function submitGrillAnswer() {
 }
 
 // ==========================================
-// UNIVERSAL AI RESEARCH & INTEL AGENT
+// UNIVERSAL AI ASSISTANT CLONE & CHAT CONTINUITY
 // ==========================================
-let activeAiSearchMode = 'general';
-let lastAiSearchQuery = '';
-let lastAiSearchResult = '';
+let aiChatSessions = [];
+let activeAiChatSessionId = null;
+let activeAiChatMessages = [];
+let isAiChatSending = false;
 
-const AI_SEARCH_PLACEHOLDERS = {
-  general: "Ask anything... (e.g. 'What is Zepto\\'s backend interview pattern for SDE-2?', 'Design a low-latency URL shortener in C++ and Node.js', 'Explain distributed locking via Redis SETNX with edge cases')",
-  company: "Enter company name or role... (e.g. 'Postman SDE-2 interview rounds and compensation bands', 'Razorpay engineering culture and tech stack', 'Groww backend team structure')",
-  concept: "Enter CS or system design concept... (e.g. 'Raft consensus vs Paxos for distributed WAL', 'Database sharding vs partitioning with PostgreSQL', 'Bloom filters in caching architecture')",
-  interview: "Enter interview scenario or behavioral question... (e.g. 'How to answer: Tell me about a time you had a high-severity production outage', 'Explain event loop and microtask queue under pressure')",
-  salary: "Enter role, YoE and company tier... (e.g. 'SDE-2 backend with 2.5 YoE negotiating with Tier-1 startup offering 26 LPA base', 'ESOP liquidation and vesting math for Series B')"
-};
+function formatAiMarkdown(text) {
+  if (!text) return '';
+  let escaped = text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
 
-function setAiSearchMode(mode) {
-  activeAiSearchMode = mode;
-  const modes = ['general', 'company', 'concept', 'interview', 'salary'];
-  modes.forEach(m => {
-    const btn = document.getElementById(`aimode-${m}`);
-    if (!btn) return;
-    if (m === mode) {
-      btn.className = 'px-3 py-1.5 rounded-xl bg-blue-600 text-white text-xs font-semibold transition flex items-center gap-1.5 shadow-md shadow-blue-600/30';
-    } else {
-      btn.className = 'px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 text-xs font-medium transition flex items-center gap-1.5';
-    }
+  // Fenced Code Blocks: ```lang ... ```
+  escaped = escaped.replace(/```([a-zA-Z0-9_-]*)\n([\s\S]*?)```/g, (match, lang, code) => {
+    return `<div class="bg-slate-950 rounded-xl border border-slate-800 my-2 overflow-hidden">
+      <div class="flex items-center justify-between px-3 py-1 bg-slate-900 border-b border-slate-800 text-[10px] font-mono text-slate-400">
+        <span>${lang || 'CODE'}</span>
+        <button onclick="copyCodeSnippet(this)" class="hover:text-white transition flex items-center gap-1">
+          <i class="fa-regular fa-copy"></i> Copy
+        </button>
+      </div>
+      <pre class="p-3 text-xs font-mono text-emerald-300 overflow-x-auto custom-scroll leading-relaxed"><code>${code.trim()}</code></pre>
+    </div>`;
   });
 
-  const input = document.getElementById('ai-search-input');
-  if (input && AI_SEARCH_PLACEHOLDERS[mode]) {
-    input.placeholder = AI_SEARCH_PLACEHOLDERS[mode];
+  // Inline code `code`
+  escaped = escaped.replace(/`([^`]+)`/g, '<code class="bg-slate-900 px-1.5 py-0.5 rounded text-amber-300 font-mono text-[11px] border border-slate-800">$1</code>');
+
+  // Headers: ###, ##, #
+  escaped = escaped.replace(/^### (.*$)/gim, '<h4 class="text-xs sm:text-sm font-bold text-indigo-300 mt-2 mb-1">$1</h4>');
+  escaped = escaped.replace(/^## (.*$)/gim, '<h3 class="text-sm sm:text-base font-bold text-white mt-2.5 mb-1.5 border-b border-slate-800 pb-1">$1</h3>');
+  escaped = escaped.replace(/^# (.*$)/gim, '<h2 class="text-base sm:text-lg font-bold text-white mt-3 mb-2">$1</h2>');
+
+  // Bold **text**
+  escaped = escaped.replace(/\*\*([^*]+)\*\*/g, '<strong class="text-white font-semibold">$1</strong>');
+
+  // Bullet points
+  escaped = escaped.replace(/^\s*[-*]\s+(.*$)/gim, '<li class="text-xs text-slate-300 ml-4 list-disc mb-1 leading-relaxed">$1</li>');
+
+  // Line breaks
+  escaped = escaped.replace(/\n\n/g, '<div class="h-2"></div>');
+
+  return escaped;
+}
+
+function copyCodeSnippet(btn) {
+  const codeEl = btn.closest('div').nextElementSibling?.querySelector('code');
+  if (!codeEl) return;
+  navigator.clipboard.writeText(codeEl.innerText).then(() => {
+    btn.innerHTML = '<i class="fa-solid fa-check text-emerald-400"></i> Copied';
+    setTimeout(() => { btn.innerHTML = '<i class="fa-regular fa-copy"></i> Copy'; }, 2000);
+  });
+}
+
+async function loadAiChatSessions() {
+  try {
+    const res = await fetch('/api/ai/sessions');
+    if (!res.ok) return;
+    aiChatSessions = await res.json();
+    renderAiChatSessionsList();
+
+    if (aiChatSessions.length > 0) {
+      if (!activeAiChatSessionId || !aiChatSessions.find(s => s.id === activeAiChatSessionId)) {
+        selectAiChatSession(aiChatSessions[0].id);
+      } else {
+        selectAiChatSession(activeAiChatSessionId);
+      }
+    } else {
+      startNewAiChat();
+    }
+  } catch (e) {
+    console.error('Failed to load chat sessions:', e);
   }
 }
 
-function fillAiSearchPrompt(text) {
-  const input = document.getElementById('ai-search-input');
-  if (input) {
-    input.value = text;
-    input.focus();
-  }
-}
+function renderAiChatSessionsList() {
+  const container = document.getElementById('ai-chat-threads-list');
+  const countBadge = document.getElementById('ai-chat-thread-count');
+  if (countBadge) countBadge.innerText = aiChatSessions.length;
+  if (!container) return;
 
-async function executeAiSearch() {
-  const input = document.getElementById('ai-search-input');
-  if (!input) return;
-  const query = input.value.trim();
-  if (!query) {
-    showToast('Enter a query or topic first!');
+  if (aiChatSessions.length === 0) {
+    container.innerHTML = `
+      <div class="text-center py-8 text-slate-500 text-xs font-mono">
+        <i class="fa-regular fa-comments text-lg mb-1 block text-slate-600"></i>
+        No conversations yet
+      </div>`;
     return;
   }
 
-  const btn = document.getElementById('btn-ai-search');
-  const card = document.getElementById('ai-search-results-card');
-  const pill = document.getElementById('ai-search-provider-pill');
-  const out = document.getElementById('ai-search-output');
+  container.innerHTML = aiChatSessions.map(s => {
+    const isActive = s.id === activeAiChatSessionId;
+    return `
+      <div onclick="selectAiChatSession(${s.id})" class="group flex items-center justify-between p-2.5 rounded-xl cursor-pointer text-xs transition ${
+        isActive 
+          ? 'bg-indigo-600/25 border border-indigo-500/40 text-white font-semibold' 
+          : 'bg-slate-950/60 hover:bg-slate-800/60 border border-slate-800/80 text-slate-300'
+      }">
+        <div class="flex items-center gap-2 min-w-0 pr-1">
+          <i class="fa-regular fa-message text-[11px] ${isActive ? 'text-indigo-400' : 'text-slate-500'} shrink-0"></i>
+          <span class="truncate text-[11px]">${s.title || 'New Conversation'}</span>
+        </div>
+        <button onclick="deleteAiChatSessionFromList(event, ${s.id})" title="Delete conversation" class="opacity-0 group-hover:opacity-100 text-slate-500 hover:text-rose-400 p-1 text-[11px] transition shrink-0">
+          <i class="fa-regular fa-trash-can"></i>
+        </button>
+      </div>
+    `;
+  }).join('');
+}
 
-  btn.disabled = true;
-  btn.innerHTML = '<span>Thinking...</span> <i class="fa-solid fa-spinner animate-spin text-xs"></i>';
-  card.classList.remove('hidden');
-  pill.innerText = `RESEARCHING (${activeAiSearchMode.toUpperCase()})...`;
-  out.innerHTML = '<span class="text-slate-400 italic font-mono"><i class="fa-solid fa-circle-notch animate-spin mr-2"></i>Synthesizing intelligence from Gemini Pro / Groq high-speed engine...</span>';
-
+async function startNewAiChat() {
   try {
-    const res = await fetch('/api/ai/universal-search', {
+    const res = await fetch('/api/ai/sessions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query, mode: activeAiSearchMode })
+      body: JSON.stringify({ title: 'New Conversation' })
     });
+    if (!res.ok) return;
+    const newSession = await res.json();
+    aiChatSessions.unshift(newSession);
+    renderAiChatSessionsList();
+    selectAiChatSession(newSession.id);
+    const input = document.getElementById('ai-chat-prompt-input');
+    if (input) input.focus();
+  } catch (e) {
+    showToast('Failed to create new conversation');
+  }
+}
+
+async function selectAiChatSession(sessionId) {
+  activeAiChatSessionId = sessionId;
+  renderAiChatSessionsList();
+
+  const titleEl = document.getElementById('ai-chat-session-title');
+  const container = document.getElementById('ai-chat-messages-container');
+  const welcomeCard = document.getElementById('ai-chat-welcome-card');
+
+  try {
+    const res = await fetch(`/api/ai/sessions/${sessionId}`);
+    if (!res.ok) return;
+    const sessionData = await res.json();
+
+    if (titleEl) titleEl.innerText = sessionData.title || 'CareerOS Universal Assistant';
+    activeAiChatMessages = sessionData.messages || [];
+
+    if (activeAiChatMessages.length === 0) {
+      if (welcomeCard) welcomeCard.classList.remove('hidden');
+      if (container) container.innerHTML = '';
+    } else {
+      if (welcomeCard) welcomeCard.classList.add('hidden');
+      renderAiChatMessages(activeAiChatMessages);
+    }
+  } catch (e) {
+    console.error('Failed to load session messages:', e);
+  }
+}
+
+function renderAiChatMessages(messages) {
+  const container = document.getElementById('ai-chat-messages-container');
+  if (!container) return;
+
+  container.innerHTML = messages.map(m => {
+    if (m.role === 'user') {
+      return `
+        <div class="flex justify-end">
+          <div class="max-w-[85%] sm:max-w-[75%] rounded-2xl p-3 sm:p-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-xs sm:text-sm shadow-md shadow-blue-600/15 leading-relaxed selection:bg-white/20 whitespace-pre-wrap">
+            ${m.content}
+          </div>
+        </div>
+      `;
+    } else {
+      const providerTag = (m.provider || 'AI').toUpperCase();
+      return `
+        <div class="flex items-start gap-2.5 sm:gap-3">
+          <div class="w-7 h-7 rounded-xl bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 flex items-center justify-center text-xs shrink-0 mt-1 shadow-sm">
+            <i class="fa-solid fa-sparkles"></i>
+          </div>
+          <div class="flex-1 glass-card rounded-2xl p-4 sm:p-5 border border-slate-800 space-y-2 text-xs sm:text-sm text-slate-200 leading-relaxed overflow-hidden">
+            <div class="flex items-center justify-between pb-2 border-b border-slate-800/80 text-[10px] font-mono text-slate-400">
+              <span class="flex items-center gap-1.5 text-emerald-400 font-bold">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> ${providerTag}
+              </span>
+              <button onclick="copyMessageContent(this)" class="hover:text-white transition flex items-center gap-1">
+                <i class="fa-regular fa-copy"></i> Copy
+              </button>
+            </div>
+            <div class="ai-msg-body space-y-1.5">${formatAiMarkdown(m.content)}</div>
+          </div>
+        </div>
+      `;
+    }
+  }).join('');
+
+  scrollChatToBottom();
+}
+
+function copyMessageContent(btn) {
+  const body = btn.closest('.glass-card')?.querySelector('.ai-msg-body');
+  if (!body) return;
+  navigator.clipboard.writeText(body.innerText).then(() => {
+    btn.innerHTML = '<i class="fa-solid fa-check text-emerald-400"></i> Copied';
+    setTimeout(() => { btn.innerHTML = '<i class="fa-regular fa-copy"></i> Copy'; }, 2000);
+  });
+}
+
+function scrollChatToBottom() {
+  const wrap = document.getElementById('ai-chat-messages-wrap');
+  if (wrap) {
+    setTimeout(() => { wrap.scrollTop = wrap.scrollHeight; }, 50);
+  }
+}
+
+async function sendAiChatMessage(customText = null) {
+  if (isAiChatSending) return;
+
+  const input = document.getElementById('ai-chat-prompt-input');
+  const text = (customText || input?.value || '').trim();
+  if (!text) return;
+
+  if (input) input.value = '';
+
+  if (!activeAiChatSessionId) {
+    await startNewAiChat();
+  }
+
+  const welcomeCard = document.getElementById('ai-chat-welcome-card');
+  if (welcomeCard) welcomeCard.classList.add('hidden');
+
+  const container = document.getElementById('ai-chat-messages-container');
+  
+  // 1. Immediately append user bubble
+  const userHtml = `
+    <div class="flex justify-end">
+      <div class="max-w-[85%] sm:max-w-[75%] rounded-2xl p-3 sm:p-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-xs sm:text-sm shadow-md shadow-blue-600/15 leading-relaxed whitespace-pre-wrap">
+        ${text}
+      </div>
+    </div>
+  `;
+  if (container) container.innerHTML += userHtml;
+
+  // 2. Append temporary thinking bubble
+  const tempId = `temp-thinking-${Date.now()}`;
+  const thinkingHtml = `
+    <div id="${tempId}" class="flex items-start gap-2.5 sm:gap-3">
+      <div class="w-7 h-7 rounded-xl bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 flex items-center justify-center text-xs shrink-0 mt-1">
+        <i class="fa-solid fa-sparkles animate-pulse"></i>
+      </div>
+      <div class="flex-1 glass-card rounded-2xl p-4 border border-slate-800 text-xs text-slate-400 flex items-center gap-2">
+        <i class="fa-solid fa-circle-notch animate-spin text-indigo-400"></i>
+        <span>Synthesizing response with multi-turn context (Target: ₹1L+/Mo Remote)...</span>
+      </div>
+    </div>
+  `;
+  if (container) container.innerHTML += thinkingHtml;
+  scrollChatToBottom();
+
+  const providerSelect = document.getElementById('ai-chat-provider-select');
+  const provider = providerSelect?.value || 'gemini';
+
+  const sendBtn = document.getElementById('btn-ai-chat-send');
+  if (sendBtn) sendBtn.disabled = true;
+  isAiChatSending = true;
+
+  try {
+    const res = await fetch(`/api/ai/sessions/${activeAiChatSessionId}/message`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: text, provider })
+    });
+
+    const thinkingEl = document.getElementById(tempId);
+    if (thinkingEl) thinkingEl.remove();
 
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      throw new Error(err.detail || 'Search failed');
+      throw new Error(err.detail || 'Message failed');
     }
 
     const data = await res.json();
-    lastAiSearchQuery = query;
-    lastAiSearchResult = data.result || data.answer || '';
+    const assistantMsg = data.assistant_message;
+    const providerTag = (data.provider || 'AI').toUpperCase();
 
-    pill.innerText = `${(data.provider || 'AI').toUpperCase()} • ${data.mode.toUpperCase()}`;
-    out.innerText = lastAiSearchResult;
-    showToast('Intel research generated!');
+    // Update session title if changed
+    if (data.session_title) {
+      const titleEl = document.getElementById('ai-chat-session-title');
+      if (titleEl) titleEl.innerText = data.session_title;
+      const sessObj = aiChatSessions.find(s => s.id === activeAiChatSessionId);
+      if (sessObj) sessObj.title = data.session_title;
+      renderAiChatSessionsList();
+    }
+
+    // Append finalized assistant bubble
+    const assistantHtml = `
+      <div class="flex items-start gap-2.5 sm:gap-3">
+        <div class="w-7 h-7 rounded-xl bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 flex items-center justify-center text-xs shrink-0 mt-1 shadow-sm">
+          <i class="fa-solid fa-sparkles"></i>
+        </div>
+        <div class="flex-1 glass-card rounded-2xl p-4 sm:p-5 border border-slate-800 space-y-2 text-xs sm:text-sm text-slate-200 leading-relaxed overflow-hidden">
+          <div class="flex items-center justify-between pb-2 border-b border-slate-800/80 text-[10px] font-mono text-slate-400">
+            <span class="flex items-center gap-1.5 text-emerald-400 font-bold">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> ${providerTag}
+            </span>
+            <button onclick="copyMessageContent(this)" class="hover:text-white transition flex items-center gap-1">
+              <i class="fa-regular fa-copy"></i> Copy
+            </button>
+          </div>
+          <div class="ai-msg-body space-y-1.5">${formatAiMarkdown(assistantMsg.content)}</div>
+        </div>
+      </div>
+    `;
+    if (container) container.innerHTML += assistantHtml;
+    scrollChatToBottom();
+
   } catch (e) {
-    console.error(e);
-    out.innerText = 'Error generating AI research. Please verify your Gemini or Groq API key in Settings.';
-    showToast('AI search error: ' + (e.message || 'Check keys'));
+    const thinkingEl = document.getElementById(tempId);
+    if (thinkingEl) thinkingEl.remove();
+    showToast('AI response error: ' + (e.message || 'Check connection'));
   } finally {
-    btn.disabled = false;
-    btn.innerHTML = '<span>Ask AI</span> <i class="fa-solid fa-arrow-up text-xs"></i>';
+    isAiChatSending = false;
+    if (sendBtn) sendBtn.disabled = false;
   }
 }
 
-function copyAiSearchResult() {
-  if (!lastAiSearchResult) {
-    const out = document.getElementById('ai-search-output');
-    if (out && out.innerText) {
-      lastAiSearchResult = out.innerText;
-    }
-  }
-  if (!lastAiSearchResult) {
-    showToast('No search result to copy.');
-    return;
-  }
-  navigator.clipboard.writeText(lastAiSearchResult).then(() => {
-    showToast('Copied AI research to clipboard!');
-  }).catch(() => {
-    showToast('Failed to copy to clipboard');
-  });
+function triggerQuickAiPrompt(text) {
+  sendAiChatMessage(text);
 }
 
-async function saveAiSearchResultToVault() {
-  if (!lastAiSearchResult) {
-    const out = document.getElementById('ai-search-output');
-    if (out && out.innerText) {
-      lastAiSearchResult = out.innerText;
+async function deleteActiveChatSession() {
+  if (!activeAiChatSessionId) return;
+  if (!confirm('Delete this conversation history?')) return;
+
+  try {
+    const res = await fetch(`/api/ai/sessions/${activeAiChatSessionId}`, { method: 'DELETE' });
+    if (res.ok) {
+      aiChatSessions = aiChatSessions.filter(s => s.id !== activeAiChatSessionId);
+      activeAiChatSessionId = null;
+      loadAiChatSessions();
+      showToast('Conversation deleted');
     }
+  } catch (e) {
+    showToast('Failed to delete conversation');
   }
-  if (!lastAiSearchResult) {
-    showToast('Execute a search first before saving.');
+}
+
+async function deleteAiChatSessionFromList(e, sessionId) {
+  e.stopPropagation();
+  if (!confirm('Delete this conversation?')) return;
+
+  try {
+    const res = await fetch(`/api/ai/sessions/${sessionId}`, { method: 'DELETE' });
+    if (res.ok) {
+      aiChatSessions = aiChatSessions.filter(s => s.id !== sessionId);
+      if (activeAiChatSessionId === sessionId) {
+        activeAiChatSessionId = null;
+        loadAiChatSessions();
+      } else {
+        renderAiChatSessionsList();
+      }
+      showToast('Conversation deleted');
+    }
+  } catch (e) {
+    showToast('Failed to delete conversation');
+  }
+}
+
+async function saveActiveChatToVault() {
+  if (!activeAiChatSessionId) {
+    showToast('No active conversation to save');
     return;
   }
 
-  const title = (lastAiSearchQuery || 'AI Research Note').slice(0, 100);
+  const container = document.getElementById('ai-chat-messages-container');
+  if (!container || !container.innerText.trim()) {
+    showToast('Conversation is empty');
+    return;
+  }
+
+  const titleEl = document.getElementById('ai-chat-session-title');
+  const title = (titleEl?.innerText || 'AI Assistant Conversation').slice(0, 100);
+
   try {
     const res = await fetch('/api/documents/custom', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         title: title,
-        category: 'ai_research',
-        content: `Query: ${lastAiSearchQuery}\nMode: ${activeAiSearchMode}\nDate: ${new Date().toLocaleString()}\n\n${lastAiSearchResult}`
+        category: 'ai_conversation',
+        content: `Conversation: ${title}\nDate: ${new Date().toLocaleString()}\n\n${container.innerText}`
       })
     });
     if (res.ok) {
-      showToast('Saved research intel to Document Vault!');
+      showToast('Saved conversation transcript to Document Vault!');
     } else {
       showToast('Failed to save to Document Vault');
     }
@@ -2509,3 +2843,16 @@ async function saveAiSearchResultToVault() {
     showToast('Error saving to vault');
   }
 }
+
+// Bind Enter key on prompt input
+document.addEventListener('DOMContentLoaded', () => {
+  const promptInput = document.getElementById('ai-chat-prompt-input');
+  if (promptInput) {
+    promptInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendAiChatMessage();
+      }
+    });
+  }
+});

@@ -10,7 +10,7 @@ from sqlalchemy import inspect, text
 from sqlalchemy.orm import Session
 
 from .database import engine, Base, get_db
-from .models import User, CandidateProfile, JobPosting, Application, GeneratedDocument, LearningProgress, DailyMomentum
+from .models import User, CandidateProfile, JobPosting, Application, GeneratedDocument, LearningProgress, DailyMomentum, AiChatSession, AiChatMessage
 from .auth import hash_password, verify_password, create_access_token, get_current_user
 from .schemas import (
     UserRegister, UserLogin, UserOut, UserKeysUpdate,
@@ -19,7 +19,8 @@ from .schemas import (
     ApplicationCreate, ApplicationUpdate, ApplicationOut,
     DocumentOut, StatsResponse, CustomDocumentCreate,
     LearningProgressUpdate, DSATutorRequest, SystemDesignReviewRequest,
-    ScreeningAnswerRequest, MockGrillRequest, MomentumIncrementRequest
+    ScreeningAnswerRequest, MockGrillRequest, MomentumIncrementRequest,
+    ChatSessionOut, ChatMessageOut, ChatSessionCreate, ChatMessageSendRequest
 )
 from .services.ai_service import AIService
 from .services.job_service import JobService
@@ -415,6 +416,7 @@ def get_radar_jobs(
     company_type: str = "all",
     salary_range: str = "all",
     source_filter: str = "all",
+    work_type: str = "all",
     limit: int = 250
 ):
     return JobService.fetch_radar_jobs(
@@ -424,8 +426,176 @@ def get_radar_jobs(
         company_type=company_type,
         salary_range=salary_range,
         source_filter=source_filter,
+        work_type=work_type,
         limit=limit
     )
+
+# ==========================================
+# UNIVERSAL AI ASSISTANT CLONE & CHAT HISTORY
+# ==========================================
+@app.get("/api/ai/sessions", response_model=List[ChatSessionOut])
+def list_ai_chat_sessions(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    sessions = db.query(AiChatSession).filter(
+        AiChatSession.user_id == current_user.id
+    ).order_by(AiChatSession.updated_at.desc()).all()
+    
+    result = []
+    for s in sessions:
+        m_count = db.query(AiChatMessage).filter(AiChatMessage.session_id == s.id).count()
+        result.append(ChatSessionOut(
+            id=s.id,
+            title=s.title,
+            created_at=s.created_at,
+            updated_at=s.updated_at,
+            message_count=m_count,
+            messages=[]
+        ))
+    return result
+
+@app.post("/api/ai/sessions", response_model=ChatSessionOut)
+def create_ai_chat_session(
+    payload: ChatSessionCreate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    new_sess = AiChatSession(
+        user_id=current_user.id,
+        title=payload.title or "New Conversation"
+    )
+    db.add(new_sess)
+    db.commit()
+    db.refresh(new_sess)
+    return ChatSessionOut(
+        id=new_sess.id,
+        title=new_sess.title,
+        created_at=new_sess.created_at,
+        updated_at=new_sess.updated_at,
+        message_count=0,
+        messages=[]
+    )
+
+@app.get("/api/ai/sessions/{session_id}", response_model=ChatSessionOut)
+def get_ai_chat_session(
+    session_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    sess = db.query(AiChatSession).filter(
+        AiChatSession.id == session_id,
+        AiChatSession.user_id == current_user.id
+    ).first()
+    if not sess:
+        raise HTTPException(status_code=404, detail="Chat session not found")
+    
+    msgs = db.query(AiChatMessage).filter(
+        AiChatMessage.session_id == session_id
+    ).order_by(AiChatMessage.id.asc()).all()
+    
+    def _to_msg_out(m):
+        return ChatMessageOut.model_validate(m) if hasattr(ChatMessageOut, "model_validate") else ChatMessageOut.from_orm(m)
+
+    return ChatSessionOut(
+        id=sess.id,
+        title=sess.title,
+        created_at=sess.created_at,
+        updated_at=sess.updated_at,
+        message_count=len(msgs),
+        messages=[_to_msg_out(m) for m in msgs]
+    )
+
+@app.delete("/api/ai/sessions/{session_id}")
+def delete_ai_chat_session(
+    session_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    sess = db.query(AiChatSession).filter(
+        AiChatSession.id == session_id,
+        AiChatSession.user_id == current_user.id
+    ).first()
+    if not sess:
+        raise HTTPException(status_code=404, detail="Chat session not found")
+    
+    db.delete(sess)
+    db.commit()
+    return {"status": "ok", "deleted_session_id": session_id}
+
+@app.post("/api/ai/sessions/{session_id}/message")
+def send_ai_chat_message(
+    session_id: int,
+    payload: ChatMessageSendRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    sess = db.query(AiChatSession).filter(
+        AiChatSession.id == session_id,
+        AiChatSession.user_id == current_user.id
+    ).first()
+    if not sess:
+        raise HTTPException(status_code=404, detail="Chat session not found")
+    
+    user_text = (payload.content or "").strip()
+    if not user_text:
+        raise HTTPException(status_code=400, detail="Message content cannot be empty")
+    
+    # 1. Save user message
+    user_msg = AiChatMessage(
+        session_id=sess.id,
+        role="user",
+        content=user_text,
+        created_at=datetime.utcnow()
+    )
+    db.add(user_msg)
+    db.commit()
+    db.refresh(user_msg)
+
+    # If first message, auto-update session title based on prompt
+    msg_count = db.query(AiChatMessage).filter(AiChatMessage.session_id == sess.id).count()
+    if msg_count <= 2 and (sess.title == "New Conversation" or not sess.title):
+        clean_title = re.sub(r'[^\w\s-]', '', user_text).strip()
+        sess.title = (clean_title[:45] + "...") if len(clean_title) > 45 else (clean_title or "Conversation")
+    
+    # 2. Gather conversation history (last 14 messages for rich context)
+    past_msgs = db.query(AiChatMessage).filter(
+        AiChatMessage.session_id == sess.id
+    ).order_by(AiChatMessage.id.asc()).all()[-14:]
+    
+    history_payload = [{"role": m.role, "content": m.content} for m in past_msgs]
+    
+    # 3. Execute Multi-Turn AI Call
+    g_key, q_key = AIService.resolve_keys(current_user.gemini_api_key, current_user.groq_api_key)
+    pref = payload.provider or current_user.preferred_ai or "gemini"
+    
+    reply_text, used_provider = AIService.execute_multi_turn_chat(
+        messages=history_payload,
+        preferred=pref,
+        gemini_key=g_key,
+        groq_key=q_key
+    )
+    
+    # 4. Save assistant reply
+    assistant_msg = AiChatMessage(
+        session_id=sess.id,
+        role="assistant",
+        content=reply_text or "No response generated.",
+        provider=used_provider,
+        created_at=datetime.utcnow()
+    )
+    db.add(assistant_msg)
+    sess.updated_at = datetime.utcnow()
+    db.commit()
+    db.refresh(assistant_msg)
+    
+    def _to_msg_out(m):
+        return ChatMessageOut.model_validate(m) if hasattr(ChatMessageOut, "model_validate") else ChatMessageOut.from_orm(m)
+
+    return {
+        "session_id": sess.id,
+        "session_title": sess.title,
+        "user_message": _to_msg_out(user_msg),
+        "assistant_message": _to_msg_out(assistant_msg),
+        "provider": used_provider
+    }
 
 # ==========================================
 # UNIVERSAL AI RESEARCH AGENT
